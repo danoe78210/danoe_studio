@@ -1,0 +1,43 @@
+; installer_danoestudio.iss
+; Installeur autonome pour Danoë Studio
+
+#define MyAppName "Danoë Studio"
+#define MyAppVersion "1.0"
+#define MyAppPublisher "Danoë"
+#define MyAppExeName "danoestudio.exe"
+#define SourceDir "Danoestudio_Autonome"
+
+[Setup]
+AppId={{8F4E2A1C-5B3D-4E6A-9C2F-DanoStudio01}}
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+DefaultDirName={autopf}\{#MyAppName}
+DefaultGroupName={#MyAppName}
+DisableProgramGroupPage=yes
+OutputDir=Installeur
+OutputBaseFilename=Danoestudio_Setup_{#MyAppVersion}
+Compression=lzma2
+SolidCompression=yes
+WizardStyle=modern
+ArchitecturesAllowed=x64
+ArchitecturesInstallIn64BitMode=x64
+PrivilegesRequired=lowest
+UninstallDisplayIcon={app}\{#MyAppExeName}
+
+[Languages]
+Name: "french"; MessagesFile: "compiler:Languages\French.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "Créer un raccourci sur le &Bureau"; GroupDescription: "Raccourcis :"
+
+[Files]
+; Copie tout le dossier autonome (exécutable + backend + ressources)
+Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[Icons]
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+
+[Run]
+Filename: "{app}\{#MyAppExeName}"; Description: "Lancer {#MyAppName}"; Flags: nowait postinstall skipifsilent

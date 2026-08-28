@@ -1,0 +1,58 @@
+# ===== Build Flutter =====
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# ===== Distribution portable =====
+dist/
+*.zip
+
+# ===== Python embarqué =====
+tools/python-embed/
+
+# ===== 🚨 EXÉCUTABLES COMPILÉS =====
+*.exe
+backend/dist/
+
+# ===== 🚨 CACHE RÉGÉNÉRABLE =====
+backend/_cache_HD/
+
+# ===== 🚨 VOS LIVRES (confidentiels) =====
+backend/*.pdf
+backend/*.docx
+backend/*.epub
+backend/journal_erreurs.md
+backend/Configuration_roman.json
+
+# ===== 🚨 VOTRE MANUSCRIT (confidentiel) =====
+backend/Chapitres/*.md
+
+# ===== ⚠️ VOS ILLUSTRATIONS (copyright) =====
+# Par défaut EXCLUES. Décommentez si vous voulez les publier :
+backend/Images/*.png
+backend/Images/*.jpg
+backend/Images/*.jpeg
+
+# ===== Système / IDE =====
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*~
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# ===== Logs / temporaires =====
+*.log
+*.tmp
+*.bak
+
+# ===== Eléments ignorés =====
+!backend/Chapitres/0.0_demo.md
