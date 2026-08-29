@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Règles Amazon KDP — Danoë Studio</title>
+<meta name="description" content="Règles Amazon KDP implémentées dans Danoë Studio : formats, marges, typographie, images.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parchemin:#f3ead7; --creme:#fffaf0; --encre:#2f2a1d; --brun:#5a4632;
+    --laiton:#a9822f; --or:#c9a24b; --ombre:0 6px 24px rgba(90,70,40,.18);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'EB Garamond',Georgia,serif;background:var(--parchemin);color:var(--encre);line-height:1.6}
+  .container{max-width:960px;margin:0 auto;padding:2rem 1.25rem}
+  header{text-align:center;padding:2.5rem 0 1rem}
+  header h1{font-family:Cinzel,serif;font-size:2.2rem;letter-spacing:.06em}
+  header .sous-titre{color:var(--brun);font-style:italic;margin-top:.4rem}
+  header .lien{display:inline-block;margin-top:.8rem;color:var(--laiton);text-decoration:none;font-weight:600}
+  header .lien:hover{text-decoration:underline}
+
+  section{margin:3rem 0}
+  section h2{font-family:Cinzel,serif;text-align:center;font-size:1.7rem;margin-bottom:.6rem;color:var(--encre)}
+  section .sous{text-align:center;color:var(--brun);margin-bottom:2rem;font-style:italic}
+
+  .carte{background:var(--creme);border-radius:12px;box-shadow:var(--ombre);padding:1.8rem;margin-bottom:1.5rem;transition:transform .25s}
+  .carte:hover{transform:translateY(-3px)}
+  .carte h3{font-family:Cinzel,serif;margin-bottom:.8rem;color:var(--brun);font-size:1.25rem}
+  .carte p{margin-bottom:.6rem}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin:2rem 0}
+
+  table{width:100%;border-collapse:collapse;margin:1rem 0;background:var(--creme);border-radius:8px;overflow:hidden;box-shadow:var(--ombre)}
+  th, td{padding:.9rem 1rem;text-align:left;border-bottom:1px solid rgba(90,70,40,.15)}
+  th{background:linear-gradient(135deg,var(--laiton),var(--or));color:#fff;font-family:Cinzel,serif;font-weight:600;font-size:.95rem}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(169,130,47,.06)}
+  td strong{color:var(--brun)}
+
+  .check-list{list-style:none}
+  .check-list li{padding:.5rem 0 .5rem 2rem;position:relative}
+  .check-list li:before{content:"✅";position:absolute;left:0}
+
+  .warning{background:var(--creme);border-left:4px solid var(--laiton);padding:1.2rem 1.5rem;margin:1.5rem 0;border-radius:8px;box-shadow:var(--ombre)}
+  .warning strong{color:var(--brun);font-family:Cinzel,serif}
+
+  .btn-row{text-align:center;margin:2rem 0}
+  .btn{display:inline-block;margin:.4rem;padding:.9rem 2.2rem;border-radius:50px;text-decoration:none;font-weight:600;font-size:1.05rem;
+       background:linear-gradient(135deg,var(--laiton),var(--or));color:#fff;box-shadow:0 4px 14px rgba(169,130,47,.4);transition:transform .25s,box-shadow .25s}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(169,130,47,.55)}
+
+  footer{text-align:center;padding:2rem 0;color:var(--brun);border-top:1px solid rgba(90,70,40,.2);margin-top:3rem}
+  footer a{color:var(--laiton);text-decoration:none;font-weight:600}
+  footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>📐 Règles Amazon KDP</h1>
+    <p class="sous-titre">Standards de publication implémentés dans Danoë Studio</p>
+    <a class="lien" href="index.html">← Retour à l'accueil</a>
+  </header>
+
+  <section>
+    <h2>📏 Formats de page supportés</h2>
+    <p class="sous">Tous les formats standards Amazon Kindle Direct Publishing</p>
+    <div class="grid">
+      <div class="carte">
+        <h3>Formats standards</h3>
+        <ul class="check-list">
+          <li>5 × 8 po (12.7 × 20.32 cm)</li>
+          <li>5.06 × 7.81 po</li>
+          <li>5.25 × 8 po</li>
+          <li>5.5 × 8.5 po</li>
+          <li>6 × 9 po (15.24 × 22.86 cm)</li>
+          <li>6.14 × 9.21 po</li>
+          <li>7 × 10 po</li>
+          <li>8 × 10 po</li>
+          <li>8.5 × 8.5 po</li>
+          <li>8.5 × 11 po</li>
+          <li>A4 (21 × 29.7 cm)</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>📐 Marges KDP automatiques</h2>
+    <p class="sous">Calculées dynamiquement selon le nombre de pages du livre</p>
+
+    <div class="carte">
+      <h3>Marges intérieures (gouttière)</h3>
+      <table>
+        <thead>
+          <tr><th>Nombre de pages</th><th>Gouttière</th><th>+ Garde 0.125"</th><th>Total appliqué</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>24 – 150 pages</td><td>0.375 po</td><td>+ 0.125 po</td><td><strong>0.500 po</strong></td></tr>
+          <tr><td>151 – 300 pages</td><td>0.500 po</td><td>+ 0.125 po</td><td><strong>0.625 po</strong></td></tr>
+          <tr><td>301 – 500 pages</td><td>0.625 po</td><td>+ 0.125 po</td><td><strong>0.750 po</strong></td></tr>
+          <tr><td>501 – 700 pages</td><td>0.750 po</td><td>+ 0.125 po</td><td><strong>0.875 po</strong></td></tr>
+          <tr><td>701 – 828 pages</td><td>0.875 po</td><td>+ 0.125 po</td><td><strong>1.000 po</strong></td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:1rem;color:var(--brun);font-style:italic">Les marges sont symétriques (gauche = droite) pour garantir la conformité KDP.</p>
+    </div>
+
+    <div class="carte">
+      <h3>Marges extérieures</h3>
+      <ul class="check-list">
+        <li>Minimum requis : 0.25 po (6.4 mm)</li>
+        <li>Implémentation : gouttière + 0.125 po (toujours ≥ 0.25 po)</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>📝 Règles typographiques</h2>
+    <p class="sous">Standards de l'édition professionnelle appliqués</p>
+
+    <div class="carte">
+      <h3>Corps du texte</h3>
+      <table>
+        <tr><th>Paramètre</th><th>Valeur</th></tr>
+        <tr><td>Alignement</td><td>Justifié</td></tr>
+        <tr><td>Retrait première ligne</td><td>0.5 cm (5 mm)</td></tr>
+        <tr><td>Interligne</td><td>Configurable (défaut : 1.0)</td></tr>
+        <tr><td>Police par défaut</td><td>Aptos 11pt</td></tr>
+      </table>
+    </div>
+
+    <div class="carte">
+      <h3>Titres</h3>
+      <ul class="check-list">
+        <li>Police : Cinzel (configurable)</li>
+        <li>Alignement : Centré</li>
+        <li>Positionnement : 1/3 de page</li>
+        <li>Lettrine automatique au début de chaque chapitre</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>🖼️ Images et illustrations</h2>
+    <p class="sous">Gestion automatique pour garantir la qualité d'impression</p>
+    <div class="carte">
+      <ul class="check-list">
+        <li>Résolution : 300 DPI minimum</li>
+        <li>Format : PNG en niveaux de gris (N&B)</li>
+        <li>Redimensionnement automatique selon format du livre</li>
+        <li>Largeur max : format − 4 cm</li>
+        <li>Hauteur max : format − 3.8 cm</li>
+        <li>Centrage horizontal automatique</li>
+        <li>Cache HD pour éviter le re-traitement</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>✅ Validation KDP</h2>
+    <p class="sous">Tous les critères d'acceptation sont garantis</p>
+    <div class="carte">
+      <table>
+        <tr><th>Critère</th><th>Statut</th></tr>
+        <tr><td>Format de page</td><td>✅ Conforme</td></tr>
+        <tr><td>Marges intérieures</td><td>✅ Conforme (barème officiel)</td></tr>
+        <tr><td>Marges extérieures</td><td>✅ Conforme (≥ 0.25 po)</td></tr>
+        <tr><td>Résolution images</td><td>✅ Conforme (300 DPI)</td></tr>
+        <tr><td>Polices embarquées</td><td>✅ Conforme</td></tr>
+        <tr><td>Nombre de pages</td><td>✅ Conforme (pair)</td></tr>
+      </table>
+    </div>
+
+    <div class="warning">
+      <strong>⚠️ Important :</strong> Vérifiez toujours votre fichier avec l'outil de prévisualisation KDP avant publication.
+    </div>
+  </section>
+
+  <section>
+    <h2>📚 Documentation officielle</h2>
+    <div class="carte">
+      <p>Consultez la documentation officielle Amazon KDP pour plus de détails :</p>
+      <p style="margin-top:.8rem"><a href="https://kdp.amazon.com/fr_FR/help/topic/G202145400" target="_blank" style="color:var(--laiton);font-weight:600">Guide KDP — Mise en forme livre broché →</a></p>
+    </div>
+  </section>
+
+  <div class="btn-row">
+    <a class="btn" href="index.html">← Retour à l'accueil</a>
+    <a class="btn" href="https://github.com/danoe78210/danoe_studio/releases/latest">📥 Télécharger Danoë Studio</a>
+  </div>
+
+  <footer>
+    <p>© 2026 Danoë Studio — <a href="https://danoeecrivain.net">danoeecrivain.net</a></p>
+    <p style="margin-top:.4rem">Conçu par un écrivain, pour les écrivains.</p>
+  </footer>
+
+</div>
+</body>
+</html>

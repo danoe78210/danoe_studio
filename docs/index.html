@@ -1,601 +1,273 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Danoë Studio - Générateur de livres KDP</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 2rem;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-        
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 3rem 2rem;
-            text-align: center;
-        }
-        
-        header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        header p {
-            font-size: 1.2rem;
-            opacity: 0.9;
-        }
-        
-        .content {
-            padding: 3rem 2rem;
-        }
-        
-        .section {
-            margin-bottom: 3rem;
-        }
-        
-        h2 {
-            color: #667eea;
-            font-size: 1.8rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 0.5rem;
-        }
-        
-        h3 {
-            color: #764ba2;
-            font-size: 1.3rem;
-            margin-top: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .kdp-rules {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            border-radius: 8px;
-        }
-        
-        .kdp-rules h3 {
-            margin-top: 0;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-            background: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        th, td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        
-        th {
-            background: #667eea;
-            color: white;
-            font-weight: 600;
-        }
-        
-        tr:hover {
-            background: #f5f5f5;
-        }
-        
-        .check-list {
-            list-style: none;
-        }
-        
-        .check-list li {
-            padding: 0.5rem 0;
-            padding-left: 2rem;
-            position: relative;
-        }
-        
-        .check-list li:before {
-            content: "✅";
-            position: absolute;
-            left: 0;
-        }
-        
-        .warning {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-radius: 8px;
-        }
-        
-        .code {
-            background: #2d2d2d;
-            color: #f8f8f2;
-            padding: 1rem;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            overflow-x: auto;
-            margin: 1rem 0;
-        }
-        
-        footer {
-            background: #2d2d2d;
-            color: white;
-            text-align: center;
-            padding: 2rem;
-        }
-        
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin: 2rem 0;
-        }
-        
-        .card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Danoë Studio — Machine à romans pour écrivains</title>
+<meta name="description" content="Organisez, corrigez et publiez vos romans (Word, PDF KDP, EPUB). Conçu par un écrivain, pour les écrivains.">
+
+<!-- ═══ Open Graph (Facebook, LinkedIn, Discord) ═══ -->
+<meta property="og:title" content="Danoë Studio — Machine à romans pour écrivains">
+<meta property="og:description" content="Organisez, corrigez et publiez vos romans (Word, PDF KDP, EPUB). Conçu par un écrivain, pour les écrivains.">
+<meta property="og:image" content="https://danoe78210.github.io/danoe_studio/screenshot.png">
+<meta property="og:url" content="https://danoe78210.github.io/danoe_studio/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+
+<!-- ═══ Twitter Card ═══ -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Danoë Studio — Machine à romans">
+<meta name="twitter:description" content="Le compagnon d'écriture des auteurs indépendants. Export KDP en un clic.">
+<meta name="twitter:image" content="https://danoe78210.github.io/danoe_studio/screenshot.png">
+
+<!-- ═══ Polices ═══ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --cuir:#2A180C; --cuir2:#3A2211;
+    --parchemin:#F3E7C9; --parchemin2:#E8D9B0;
+    --or:#D4A84B; --or2:#B8860B;
+    --sang:#8E2A2A; --encre:#2b2016;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Crimson Text',serif;
+    color:var(--parchemin);
+    background:radial-gradient(1200px 700px at 50% -10%,#4a2f18,var(--cuir) 60%);
+    line-height:1.6;
+  }
+  .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+
+  /* ═══ En-tête ═══ */
+  header{padding:20px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  .logo{font-family:Cinzel,serif;font-weight:700;color:var(--or);font-size:1.2rem;letter-spacing:1px}
+
+  /* ═══ Hero ═══ */
+  .hero{text-align:center;padding:50px 0 30px}
+  h1{
+    font-family:Cinzel,serif;
+    font-size:clamp(2.2rem,5.5vw,3.6rem);
+    color:var(--or);
+    letter-spacing:3px;
+    text-shadow:0 2px 20px rgba(212,168,75,.3);
+  }
+  .slogan{font-style:italic;font-size:1.3rem;color:var(--parchemin2);margin:16px 0 30px}
+
+  /* ═══ Vidéo de démonstration ═══ */
+  .hero-video{
+    width:100%;
+    max-width:900px;
+    border-radius:10px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+    border:2px solid var(--or);
+    margin:26px auto 10px;
+    display:block;
+    background:#000;
+  }
+
+  /* ═══ Boutons ═══ */
+  .btn-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+  .btn{
+    display:inline-block;
+    padding:14px 34px;
+    border-radius:6px;
+    font-family:Cinzel,serif;
+    font-weight:700;
+    text-decoration:none;
+    letter-spacing:1px;
+    transition:.2s;
+    font-size:1rem;
+  }
+  .btn-or{
+    background:linear-gradient(180deg,var(--or),var(--or2));
+    color:var(--encre);
+    box-shadow:0 6px 18px rgba(212,168,75,.35);
+  }
+  .btn-or:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(212,168,75,.5)}
+  .btn-ghost{border:1px solid var(--or);color:var(--or);background:transparent}
+  .btn-ghost:hover{background:rgba(212,168,75,.1)}
+
+  /* ═══ Sections ═══ */
+  h2{
+    font-family:Cinzel,serif;
+    text-align:center;
+    color:var(--or);
+    font-size:1.9rem;
+    margin:60px 0 10px;
+    letter-spacing:1px;
+  }
+  h2 + p.sub{text-align:center;color:var(--parchemin2);margin-bottom:30px;font-style:italic}
+
+  /* ═══ Fonctionnalités ═══ */
+  .features{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:20px;
+    padding:30px 0 10px;
+  }
+  .card{
+    background:linear-gradient(160deg,var(--parchemin),var(--parchemin2));
+    color:var(--encre);
+    border-radius:10px;
+    padding:24px;
+    border-top:4px solid var(--or2);
+    box-shadow:0 8px 20px rgba(0,0,0,.4);
+  }
+  .card h3{font-family:Cinzel,serif;color:var(--sang);margin-bottom:10px;font-size:1.15rem}
+
+  /* ═══ Étapes ═══ */
+  .steps{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;padding:30px 0}
+  .step{
+    flex:1;min-width:200px;max-width:280px;text-align:center;
+    background:rgba(0,0,0,.25);
+    border:1px solid var(--or2);
+    border-radius:10px;
+    padding:24px;
+  }
+  .step b{font-family:Cinzel,serif;color:var(--or);font-size:2rem;display:block;margin-bottom:8px}
+
+  /* ═══ FAQ ═══ */
+  .faq{max-width:700px;margin:0 auto;padding:20px 0 40px}
+  .faq details{
+    background:rgba(0,0,0,.2);
+    border:1px solid rgba(212,168,75,.3);
+    border-radius:8px;
+    padding:16px 20px;
+    margin-bottom:10px;
+  }
+  .faq summary{font-family:Cinzel,serif;color:var(--or);cursor:pointer;font-weight:600}
+  .faq p{margin-top:10px;color:var(--parchemin2)}
+
+  /* ═══ CTA final ═══ */
+  .cta{text-align:center;padding:40px 0 70px}
+  .cta .note{margin-top:14px;color:var(--parchemin2);font-size:.95rem}
+
+  /* ═══ Footer ═══ */
+  footer{
+    text-align:center;
+    padding:26px 0;
+    border-top:1px solid rgba(212,168,75,.3);
+    color:var(--parchemin2);
+    font-size:.95rem;
+  }
+  footer a{color:var(--or);text-decoration:none}
+  footer a:hover{text-decoration:underline}
+
+  @media (max-width:600px){
+    h1{letter-spacing:1px}
+    .btn{padding:12px 22px;font-size:.95rem}
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>📚 Danoë Studio</h1>
-            <p>Générateur professionnel de livres brochés conformes Amazon KDP</p>
-        </header>
-        
-        <div class="content">
-            <section class="section">
-                <h2>🎯 Conformité Amazon KDP</h2>
-                <p>Cette application implémente <strong>toutes les règles officielles</strong> de mise en page d'Amazon Kindle Direct Publishing pour les livres brochés, garantissant l'acceptation automatique de vos fichiers.</p>
-                
-                <div class="grid">
-                    <div class="card">
-                        <h3>📏 Formats supportés</h3>
-                        <ul class="check-list">
-                            <li>5 x 8 po (12.7 × 20.32 cm)</li>
-                            <li>5.06 x 7.81 po</li>
-                            <li>5.25 x 8 po</li>
-                            <li>5.5 x 8.5 po</li>
-                            <li>6 x 9 po (standard)</li>
-                            <li>6.14 x 9.21 po</li>
-                            <li>7 x 10 po</li>
-                            <li>8 x 10 po</li>
-                            <li>8.5 x 8.5 po</li>
-                            <li>8.5 x 11 po</li>
-                            <li>A4 (21 × 29.7 cm)</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="card">
-                        <h3>✨ Fonctionnalités clés</h3>
-                        <ul class="check-list">
-                            <li>Marges KDP dynamiques selon nombre de pages</li>
-                            <li>Conversion Word→PDF automatique</li>
-                            <li>Images HD 300 DPI en niveaux de gris</li>
-                            <li>Corrections typographiques automatiques</li>
-                            <li>Table des matières avec champs Word</li>
-                            <li>Page copyright complète</li>
-                            <li>Parité Word/PDF garantie</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-            
-            <section class="section">
-                <h2>📐 Règles de marges KDP implémentées</h2>
-                
-                <div class="kdp-rules">
-                    <h3>Marges intérieures (gouttière/reliure)</h3>
-                    <p>Les marges intérieures dépendent du nombre de pages du livre :</p>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Nombre de pages</th>
-                                <th>Marge intérieure</th>
-                                <th>Implémentation</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>24 à 150 pages</td>
-                                <td>0.375 po (9.6 mm)</td>
-                                <td>✅ Automatique</td>
-                            </tr>
-                            <tr>
-                                <td>151 à 300 pages</td>
-                                <td>0.5 po (12.7 mm)</td>
-                                <td>✅ Automatique</td>
-                            </tr>
-                            <tr>
-                                <td>301 à 500 pages</td>
-                                <td>0.625 po (15.9 mm)</td>
-                                <td>✅ Automatique</td>
-                            </tr>
-                            <tr>
-                                <td>501 à 700 pages</td>
-                                <td>0.75 po (19.1 mm)</td>
-                                <td>✅ Automatique</td>
-                            </tr>
-                            <tr>
-                                <td>701 à 828 pages</td>
-                                <td>0.875 po (22.3 mm)</td>
-                                <td>✅ Automatique</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <p><strong>Note :</strong> L'application ajoute automatiquement 0.125 po (3.2 mm) de marge de sécurité, appliquée symétriquement des deux côtés pour garantir la conformité.</p>
-                </div>
-                
-                <div class="kdp-rules">
-                    <h3>Marges extérieures</h3>
-                    <ul class="check-list">
-                        <li>Minimum requis par KDP : 0.25 po (6.4 mm)</li>
-                        <li>Implémentation : gouttière + 0.125 po (toujours ≥ 0.25 po)</li>
-                        <li>Marges symétriques appliquées (gauche = droite)</li>
-                    </ul>
-                </div>
-                
-                <div class="kdp-rules">
-                    <h3>Marges haut/bas</h3>
-                    <ul class="check-list">
-                        <li>En-tête : 1.0 cm</li>
-                        <li>Pied de page : 1.0 cm</li>
-                        <li>Marges haut/bas : 1.9 cm (fixes)</li>
-                    </ul>
-                </div>
-            </section>
-            
-            <section class="section">
-                <h2>📝 Règles typographiques</h2>
-                
-                <div class="kdp-rules">
-                    <h3>Corps du texte</h3>
-                    <table>
-                        <tr>
-                            <th>Paramètre</th>
-                            <th>Valeur par défaut</th>
-                            <th>Personnalisable</th>
-                        </tr>
-                        <tr>
-                            <td>Police</td>
-                            <td>Aptos</td>
-                            <td>✅ Oui</td>
-                        </tr>
-                        <tr>
-                            <td>Taille</td>
-                            <td>11 pt</td>
-                            <td>✅ Oui</td>
-                        </tr>
-                        <tr>
-                            <td>Alignement</td>
-                            <td>Justifié</td>
-                            <td>❌ Non (requis KDP)</td>
-                        </tr>
-                        <tr>
-                            <td>Retrait 1ère ligne</td>
-                            <td>0.5 cm (5 mm)</td>
-                            <td>❌ Non (standard édition)</td>
-                        </tr>
-                        <tr>
-                            <td>Interligne</td>
-                            <td>1.0 (simple)</td>
-                            <td>✅ Oui</td>
-                        </tr>
-                    </table>
-                </div>
-                
-                <div class="kdp-rules">
-                    <h3>Titres</h3>
-                    <table>
-                        <tr>
-                            <th>Élément</th>
-                            <th>Police</th>
-                            <th>Taille par défaut</th>
-                        </tr>
-                        <tr>
-                            <td>Titres d'acte</td>
-                            <td>Cinzel</td>
-                            <td>16 pt</td>
-                        </tr>
-                        <tr>
-                            <td>Titres de chapitre (ligne 1)</td>
-                            <td>Cinzel</td>
-                            <td>14 pt</td>
-                        </tr>
-                        <tr>
-                            <td>Titres de chapitre (ligne 2)</td>
-                            <td>Cinzel</td>
-                            <td>13 pt</td>
-                        </tr>
-                        <tr>
-                            <td>Sous-chapitres</td>
-                            <td>Aptos (gras)</td>
-                            <td>12 pt</td>
-                        </tr>
-                    </table>
-                </div>
-            </section>
-            
-            <section class="section">
-                <h2>🖼️ Gestion des images</h2>
-                
-                <div class="kdp-rules">
-                    <h3>Images haute définition</h3>
-                    <ul class="check-list">
-                        <li>Résolution : 300 DPI (obligatoire KDP)</li>
-                        <li>Format : PNG en niveaux de gris (N&B)</li>
-                        <li>Redimensionnement automatique selon format du livre</li>
-                        <li>Largeur maximale : format - 4 cm</li>
-                        <li>Hauteur maximale : format - 3.8 cm</li>
-                        <li>Centrage horizontal automatique</li>
-                        <li>Cache HD pour éviter le re-traitement</li>
-                    </ul>
-                </div>
-            </section>
-            
-            <section class="section">
-                <h2>✏️ Corrections typographiques automatiques</h2>
-                
-                <div class="kdp-rules">
-                    <h3>Corrections communes (tous les chapitres)</h3>
-                    <ul class="check-list">
-                        <li>Suppression espaces insécables invisibles</li>
-                        <li>Remplacement "..." par "…"</li>
-                        <li>Remplacement apostrophe droite par courbe</li>
-                        <li>Correction "--- " par "— " (tiret cadratin)</li>
-                        <li>Suppression BOM et caractères invisibles</li>
-                    </ul>
-                </div>
-                
-                <div class="kdp-rules">
-                    <h3>Corrections par chapitre</h3>
-                    <p>L'application applique des corrections spécifiques selon le préfixe du fichier :</p>
-                    <table>
-                        <tr>
-                            <th>Chapitre</th>
-                            <th>Exemples de corrections</th>
-                        </tr>
-                        <tr>
-                            <td>1.1 (Prologue)</td>
-                            <td>"E t si" → "Et si", "XIIe siècle" → "XIIᵉ siècle"</td>
-                        </tr>
-                        <tr>
-                            <td>2.1 (Nunael)</td>
-                            <td>"une par inhérente" → "une part inhérente"</td>
-                        </tr>
-                        <tr>
-                            <td>2.2 (Naissance univers)</td>
-                            <td>"Ute tension" → "Une tension", "Nunael" → "Nunaël"</td>
-                        </tr>
-                    </table>
-                    <p class="warning">💡 <strong>Astuce :</strong> Ajoutez vos propres corrections dans <code>regles_mise_en_page.json</code> pour les appliquer automatiquement.</p>
-                </div>
-            </section>
-            
-            <section class="section">
-                <h2>📄 Structure du livre</h2>
-                
-                <div class="kdp-rules">
-                    <h3>Pages liminaires (automatiques)</h3>
-                    <ul class="check-list">
-                        <li>Page de titre (titre + sous-titre + auteur)</li>
-                        <li>Page copyright (©, ISBN, dépôt légal, éditeur, mention légale)</li>
-                        <li>Dédicace (si renseignée)</li>
-                        <li>Épigraphe (si renseignée)</li>
-                        <li>Avertissement (si renseigné)</li>
-                    </ul>
-                </div>
-                
-                <div class="kdp-rules">
-                    <h3>Pages de contenu</h3>
-                    <ul class="check-list">
-                        <li>Pages d'acte (centrées verticalement)</li>
-                        <li>Chapitres avec titre sur 1 ou 2 lignes</li>
-                        <li>Lettrine automatique au début de chaque chapitre</li>
-                        <li>Séparateurs de scène (--- ✦ ---)</li>
-                        <li>En-têtes avec titre du chapitre</li>
-                        <li>Numérotation automatique des pages</li>
-                    </ul>
-                </div>
-                
-                <div class="kdp-rules">
-                    <h3>Table des matières</h3>
-                    <ul class="check-list">
-                        <li>Générée automatiquement en fin de volume</li>
-                        <li>Champs Word dynamiques (mise à jour avec Ctrl+A, F9)</li>
-                        <li>Liens hypertextes vers les chapitres</li>
-                        <li>Numéros de page alignés à droite</li>
-                    </ul>
-                </div>
-            </section>
-            
-            <section class="section">
-                <h2>🔄 Workflow de génération</h2>
-                
-                <div class="kdp-rules">
-                    <h3>Processus Word</h3>
-                    <ol style="margin-left: 2rem; margin-top: 1rem;">
-                        <li>Lecture configuration (JSON prioritaire, repli Excel)</li>
-                        <li>Calcul estimation nombre de pages</li>
-                        <li>Application marges KDP selon barème</li>
-                        <li>Génération contenu avec styles Word</li>
-                        <li>Comptage pages réelles via Word COM</li>
-                        <li>Convergence marges (si changement de palier)</li>
-                        <li>Mise à jour champs et table des matières</li>
-                        <li>Export fichier <code>*_KDP.docx</code></li>
-                    </ol>
-                </div>
-                
-                <div class="kdp-rules">
-                    <h3>Processus PDF</h3>
-                    <ol style="margin-left: 2rem; margin-top: 1rem;">
-                        <li>Détection du dernier fichier Word généré</li>
-                        <li>Conversion Word→PDF via Word COM (timeout 180s)</li>
-                        <li>Si timeout : bascule en mode <code>--direct</code> (génération pure Python)</li>
-                        <li>Application corrections typographiques</li>
-                        <li>Génération PDF avec ReportLab</li>
-                        <li>Export fichier <code>*_KDP.pdf</code></li>
-                    </ol>
-                    <div class="code">
-# Forcer le mode direct (sans conversion Word)
-python generer_pdf_direct.py --direct
-                    </div>
-                </div>
-            </section>
-            
-            <section class="section">
-                <h2>⚙️ Configuration</h2>
-                
-                <div class="kdp-rules">
-                    <h3>Fichier de configuration</h3>
-                    <p>L'application utilise <code>Configuration_roman.json</code> comme source principale, avec repli automatique sur <code>Configuration_roman.xlsx</code>.</p>
-                    
-                    <h3 style="margin-top: 1.5rem;">Structure JSON</h3>
-                    <div class="code">
-{
-  "informations": {
-    "titre_complet": "Les Schattenjägers",
-    "sous_titre": "Tome 1, Nunael",
-    "auteur": "Danoë",
-    "annee_publication": "2026",
-    "isbn": "979-8865294184"
-  },
-  "style": {
-    "format_livre": "7 x 10 po",
-    "police_corps": "Aptos",
-    "taille_corps_pt": 11,
-    "police_titres": "Cinzel"
-  },
-  "chapitres": [
-    {"type": "acte", "acte": "ACTE I – PROLOGUE"},
-    {"type": "chapitre", "fichier_source": "1.1", "chapitre_ligne1": "Prologue"}
-  ]
-}
-                    </div>
-                </div>
-            </section>
-            
-            <section class="section">
-                <h2>✅ Validation KDP</h2>
-                
-                <div class="kdp-rules">
-                    <h3>Critères d'acceptation Amazon KDP</h3>
-                    <table>
-                        <tr>
-                            <th>Critère</th>
-                            <th>Statut</th>
-                            <th>Détail</th>
-                        </tr>
-                        <tr>
-                            <td>Format de page</td>
-                            <td>✅ Conforme</td>
-                            <td>Tous les formats standards supportés</td>
-                        </tr>
-                        <tr>
-                            <td>Marges intérieures</td>
-                            <td>✅ Conforme</td>
-                            <td>Barème officiel KDP respecté</td>
-                        </tr>
-                        <tr>
-                            <td>Marges extérieures</td>
-                            <td>✅ Conforme</td>
-                            <td>Toujours ≥ 0.25 po</td>
-                        </tr>
-                        <tr>
-                            <td>Résolution images</td>
-                            <td>✅ Conforme</td>
-                            <td>300 DPI garanti</td>
-                        </tr>
-                        <tr>
-                            <td>Format PDF</td>
-                            <td>✅ Conforme</td>
-                            <td>PDF/X-1a compatible</td>
-                        </tr>
-                        <tr>
-                            <td>Polices embarquées</td>
-                            <td>✅ Conforme</td>
-                            <td>Toutes les polices incluses</td>
-                        </tr>
-                        <tr>
-                            <td>Nombre de pages</td>
-                            <td>✅ Conforme</td>
-                            <td>Pair (pages blanches ajoutées si nécessaire)</td>
-                        </tr>
-                    </table>
-                </div>
-                
-                <div class="warning">
-                    <strong>⚠️ Important :</strong> Vérifiez toujours votre fichier avec l'outil de prévisualisation KDP avant publication. Cette application garantit la conformité technique, mais le contenu doit respecter les conditions d'utilisation d'Amazon.
-                </div>
-            </section>
-            
-            <section class="section">
-                <h2>📚 Ressources</h2>
-                
-                <div class="grid">
-                    <div class="card">
-                        <h3>📖 Documentation officielle</h3>
-                        <p><a href="https://kdp.amazon.com/fr_FR/help/topic/G202145400" target="_blank">Guide KDP - Mise en forme livre broché</a></p>
-                        <p><a href="https://kdp.amazon.com/fr_FR/help/topic/G200645690" target="_blank">Spécifications techniques KDP</a></p>
-                    </div>
-                    
-                    <div class="card">
-                        <h3>🔧 Utilisation</h3>
-                        <div class="code" style="font-size: 0.9rem;">
-# Générer le livre Word
-python generer_roman.py
+  <div class="wrap">
 
-# Générer le PDF (conversion Word)
-python generer_pdf_direct.py
+    <!-- ═══════ EN-TÊTE ═══════ -->
+    <header>
+      <span class="logo">🖋 Danoë Studio</span>
+      <a class="btn btn-ghost" href="https://github.com/danoe78210/danoe_studio" style="padding:8px 18px">Code source</a>
+    </header>
 
-# Mode rapide (estimations)
-python generer_roman.py --rapide
+    <!-- ═══════ HERO + VIDÉO ═══════ -->
+    <section class="hero">
+      <h1>DANOË STUDIO</h1>
 
-# Mode direct PDF (sans Word)
-python generer_pdf_direct.py --direct
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-        
-        <footer>
-            <p><strong>Danoë Studio</strong> - Générateur de livres professionnels conformes Amazon KDP</p>
-            <p style="margin-top: 0.5rem; opacity: 0.8;">Version 3.0 - Août 2026</p>
-        </footer>
+      <!-- Vidéo : démarre automatiquement UNE fois, sans controls, sans loop -->
+      <video class="hero-video" autoplay muted playsinline poster="screenshot.png">
+        <source src="demo.mp4" type="video/mp4">
+        Votre navigateur ne prend pas en charge les vidéos HTML5.
+      </video>
+
+      <div class="btn-row">
+        <a class="btn btn-or" href="https://github.com/danoe78210/danoe_studio/releases/latest">📥 Télécharger gratuitement</a>
+        <a class="btn btn-ghost" href="https://danoeecrivain.net">Visiter le site</a>
+      </div>
+    </section>
+
+    <!-- ═══════ FONCTIONNALITÉS ═══════ -->
+    <h2>✨ Ce que fait Danoë Studio</h2>
+    <p class="sub">Le compagnon discret de votre manuscrit, de la première page à la publication.</p>
+
+    <section class="features">
+      <div class="card">
+        <h3>📚 Organisation</h3>
+        Actes, chapitres et images se réordonnent d'un glisser-déposer. Votre manuscrit retrouve son souffle.
+      </div>
+      <div class="card">
+        <h3>✍️ Correction</h3>
+        Un relecteur patient (LanguageTool) signale les faux pas, sans jamais juger la main qui écrit.
+      </div>
+      <div class="card">
+        <h3>📖 Export KDP</h3>
+        Word, PDF (marges gouttière automatiques) et EPUB prêts pour Amazon, en un clic.
+      </div>
+      <div class="card">
+        <h3>🕯️ Immersion</h3>
+        Parchemin, lettrines, pages qui se tournent : écrire redevient un lieu où l'on retourne.
+      </div>
+      <div class="card">
+        <h3>📊 Registre</h3>
+        Mots, pages, chapitres : le studio tient les comptes quand vous n'en avez plus la force.
+      </div>
+      <div class="card">
+        <h3>🤖 Résumés IA</h3>
+        Un quatrième de couverture qui résiste ? Le studio esquisse un synopsis à signer ou désavouer.
+      </div>
+    </section>
+
+    <!-- ═══════ ÉTAPES ═══════ -->
+    <h2>🚀 Trois gestes, un livre</h2>
+    <p class="sub">De l'idée au fichier KDP, sans quitter l'application.</p>
+
+    <section class="steps">
+      <div class="step"><b>1</b>Organisez votre manuscrit</div>
+      <div class="step"><b>2</b>Corrigez sans quitter la page</div>
+      <div class="step"><b>3</b>Publiez en Word · PDF · EPUB</div>
+    </section>
+
+    <!-- ═══════ FAQ ═══════ -->
+    <h2>❓ Questions fréquentes</h2>
+    <div class="faq">
+      <details>
+        <summary>L'application est-elle vraiment gratuite ?</summary>
+        <p>Oui, totalement. Aucune fonctionnalité payante, aucun abonnement, aucune publicité. C'est un outil conçu par un écrivain, pour les écrivains.</p>
+      </details>
+      <details>
+        <summary>Puis-je l'utiliser sans Internet ?</summary>
+        <p>Oui. Seule la première connexion nécessite Internet (téléchargement des polices). Ensuite, tout fonctionne hors-ligne.</p>
+      </details>
+      <details>
+        <summary>Mes textes sont-ils envoyés quelque part ?</summary>
+        <p>Non. Vos chapitres restent sur votre ordinateur. Seule la correction orthographique interroge LanguageTool (service gratuit et ouvert).</p>
+      </details>
+      <details>
+        <summary>Sur quels systèmes fonctionne-t-il ?</summary>
+        <p>Windows 10 et 11 (64 bits). Versions macOS et Linux en développement.</p>
+      </details>
+      <details>
+        <summary>Windows affiche un avertissement SmartScreen, est-ce normal ?</summary>
+        <p>Oui, c'est habituel pour les applications non signées numériquement. Cliquez sur <em>« Informations complémentaires »</em> puis <em>« Exécuter quand même »</em>.</p>
+      </details>
     </div>
+
+    <!-- ═══════ CTA FINAL ═══════ -->
+    <section class="cta">
+      <h2>🖋 Prêt à écrire ?</h2>
+      <div class="btn-row" style="margin-top:24px">
+        <a class="btn btn-or" href="https://github.com/danoe78210/danoe_studio/releases/latest">📥 Obtenir Danoë Studio</a>
+      </div>
+      <p class="note">Windows 10/11 · Gratuit · Aucune installation requise</p>
+    </section>
+
+    <!-- ═══════ FOOTER ═══════ -->
+    <footer>
+      © 2026 Danoë Studio — <a href="https://danoeecrivain.net">danoeecrivain.net</a><br>
+      <small>Conçu par un écrivain, pour les écrivains.</small>
+    </footer>
+
+  </div>
 </body>
 </html>
