@@ -6,7 +6,7 @@
 <title>Danoë Studio — Machine à romans pour écrivains</title>
 <meta name="description" content="Organisez, corrigez et publiez vos romans (Word, PDF KDP, EPUB). Conçu par un écrivain, pour les écrivains.">
 
-<!-- Open Graph (Facebook, LinkedIn, Discord) -->
+<!-- ═══ Open Graph (Facebook, LinkedIn, Discord) ═══ -->
 <meta property="og:title" content="Danoë Studio — Machine à romans pour écrivains">
 <meta property="og:description" content="Organisez, corrigez et publiez vos romans (Word, PDF KDP, EPUB). Conçu par un écrivain, pour les écrivains.">
 <meta property="og:image" content="https://danoe78210.github.io/danoe_studio/screenshot.png">
@@ -14,13 +14,13 @@
 <meta property="og:type" content="website">
 <meta property="og:locale" content="fr_FR">
 
-<!-- Twitter Card -->
+<!-- ═══ Twitter Card ═══ -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Danoë Studio — Machine à romans">
 <meta name="twitter:description" content="Le compagnon d'écriture des auteurs indépendants. Export KDP en un clic.">
 <meta name="twitter:image" content="https://danoe78210.github.io/danoe_studio/screenshot.png">
 
-<!-- Favicons / polices -->
+<!-- ═══ Polices ═══ -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
@@ -41,11 +41,11 @@
   }
   .wrap{max-width:1000px;margin:0 auto;padding:0 24px}
 
-  /* En-tête */
+  /* ═══ En-tête ═══ */
   header{padding:20px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
   .logo{font-family:Cinzel,serif;font-weight:700;color:var(--or);font-size:1.2rem;letter-spacing:1px}
 
-  /* Hero */
+  /* ═══ Hero ═══ */
   .hero{text-align:center;padding:50px 0 30px}
   h1{
     font-family:Cinzel,serif;
@@ -54,24 +54,21 @@
     letter-spacing:3px;
     text-shadow:0 2px 20px rgba(212,168,75,.3);
   }
-  .slogan{
-    font-style:italic;
-    font-size:1.3rem;
-    color:var(--parchemin2);
-    margin:16px 0 30px;
-  }
+  .slogan{font-style:italic;font-size:1.3rem;color:var(--parchemin2);margin:16px 0 30px}
 
-  /* Capture d'écran */
-  .screenshot{
-    max-width:100%;
+  /* ═══ Vidéo de démonstration ═══ */
+  .hero-video{
+    width:100%;
+    max-width:900px;
     border-radius:10px;
     box-shadow:0 20px 60px rgba(0,0,0,.6);
     border:2px solid var(--or);
-    margin:30px auto;
+    margin:26px auto 10px;
     display:block;
+    background:#000;
   }
 
-  /* Boutons */
+  /* ═══ Boutons ═══ */
   .btn-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:20px}
   .btn{
     display:inline-block;
@@ -90,14 +87,10 @@
     box-shadow:0 6px 18px rgba(212,168,75,.35);
   }
   .btn-or:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(212,168,75,.5)}
-  .btn-ghost{
-    border:1px solid var(--or);
-    color:var(--or);
-    background:transparent;
-  }
+  .btn-ghost{border:1px solid var(--or);color:var(--or);background:transparent}
   .btn-ghost:hover{background:rgba(212,168,75,.1)}
 
-  /* Sections */
+  /* ═══ Sections ═══ */
   h2{
     font-family:Cinzel,serif;
     text-align:center;
@@ -108,7 +101,7 @@
   }
   h2 + p.sub{text-align:center;color:var(--parchemin2);margin-bottom:30px;font-style:italic}
 
-  /* Features */
+  /* ═══ Fonctionnalités ═══ */
   .features{
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
@@ -123,40 +116,20 @@
     border-top:4px solid var(--or2);
     box-shadow:0 8px 20px rgba(0,0,0,.4);
   }
-  .card h3{
-    font-family:Cinzel,serif;
-    color:var(--sang);
-    margin-bottom:10px;
-    font-size:1.15rem;
-  }
+  .card h3{font-family:Cinzel,serif;color:var(--sang);margin-bottom:10px;font-size:1.15rem}
 
-  /* Steps */
-  .steps{
-    display:flex;
-    gap:16px;
-    justify-content:center;
-    flex-wrap:wrap;
-    padding:30px 0;
-  }
+  /* ═══ Étapes ═══ */
+  .steps{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;padding:30px 0}
   .step{
-    flex:1;
-    min-width:200px;
-    max-width:280px;
-    text-align:center;
+    flex:1;min-width:200px;max-width:280px;text-align:center;
     background:rgba(0,0,0,.25);
     border:1px solid var(--or2);
     border-radius:10px;
     padding:24px;
   }
-  .step b{
-    font-family:Cinzel,serif;
-    color:var(--or);
-    font-size:2rem;
-    display:block;
-    margin-bottom:8px;
-  }
+  .step b{font-family:Cinzel,serif;color:var(--or);font-size:2rem;display:block;margin-bottom:8px}
 
-  /* FAQ */
+  /* ═══ FAQ ═══ */
   .faq{max-width:700px;margin:0 auto;padding:20px 0 40px}
   .faq details{
     background:rgba(0,0,0,.2);
@@ -165,19 +138,14 @@
     padding:16px 20px;
     margin-bottom:10px;
   }
-  .faq summary{
-    font-family:Cinzel,serif;
-    color:var(--or);
-    cursor:pointer;
-    font-weight:600;
-  }
+  .faq summary{font-family:Cinzel,serif;color:var(--or);cursor:pointer;font-weight:600}
   .faq p{margin-top:10px;color:var(--parchemin2)}
 
-  /* CTA final */
+  /* ═══ CTA final ═══ */
   .cta{text-align:center;padding:40px 0 70px}
   .cta .note{margin-top:14px;color:var(--parchemin2);font-size:.95rem}
 
-  /* Footer */
+  /* ═══ Footer ═══ */
   footer{
     text-align:center;
     padding:26px 0;
@@ -203,13 +171,15 @@
       <a class="btn btn-ghost" href="https://github.com/danoe78210/danoe_studio" style="padding:8px 18px">Code source</a>
     </header>
 
-    <!-- ═══════ HERO ═══════ -->
+    <!-- ═══════ HERO + VIDÉO ═══════ -->
     <section class="hero">
       <h1>DANOË STUDIO</h1>
-      <p class="slogan">« Né d'une plume, pour toutes les plumes. »</p>
 
-      <!-- Capture d'écran de l'application -->
-      <img src="screenshot.png" alt="Danoë Studio — interface de l'application" class="screenshot">
+      <!-- Vidéo : démarre automatiquement UNE fois, sans controls, sans loop -->
+      <video class="hero-video" autoplay muted playsinline poster="screenshot.png">
+        <source src="demo.mp4" type="video/mp4">
+        Votre navigateur ne prend pas en charge les vidéos HTML5.
+      </video>
 
       <div class="btn-row">
         <a class="btn btn-or" href="https://github.com/danoe78210/danoe_studio/releases/latest">📥 Télécharger gratuitement</a>
