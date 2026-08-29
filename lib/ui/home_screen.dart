@@ -40,6 +40,7 @@ class _AppSettings {
   final String pythonPath;
   final String spellLevel;
   final String spellVariant;
+  final String formatLivre;
   final String texteFont;
   final String titresFont;
   final String texteSize;
@@ -50,6 +51,7 @@ class _AppSettings {
     required this.pythonPath,
     required this.spellLevel,
     required this.spellVariant,
+    required this.formatLivre,
     required this.texteFont,
     required this.titresFont,
     required this.texteSize,
@@ -66,6 +68,17 @@ const List<String> kTaillesTexte = ['10', '10.5', '11', '11.5', '12', '13', '14'
 const List<String> kTaillesTitres = ['12', '13', '14', '16', '18', '20', '22', '24'];
 const List<String> kInterlignes = ['1.0', '1.15', '1.25', '1.5'];
 
+const List<String> kFormats = [
+  '12,7 x 20,32 cm (5 x 8 po)',
+  '13,34 x 20,32 cm (5,25 x 8 po)',
+  '13,97 x 21,59 cm (5,5 x 8,5 po)',
+  '15,24 x 22,86 cm (6 x 9 po)',
+  '17,78 x 25,4 cm (7 x 10 po)',
+  '18,99 x 24,61 cm (7,44 x 9,69 po)',
+  '20,32 x 25,4 cm (8 x 10 po)',
+  '21 x 29,7 cm (A4)',
+];
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
   @override
@@ -80,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String _spellLevel = 'default';
   String _spellVariant = 'fr-FR';
   String _modeGeneration = 'exact';
+  String _formatLivre = '15,24 x 22,86 cm (6 x 9 po)';
   String _texteFont = 'Aptos';
   String _titresFont = 'Cinzel';
   String _texteSize = '11';
@@ -132,6 +146,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   String get _configRomanPath => '$_scriptsDir\\Configuration_roman.json';
 
+  // ══ Dossier export à la racine du backend ══
+  String get _exportPath => '$_scriptsDir\\export';
+
+  void _assurerExport() {
+    try { Directory(_exportPath).createSync(recursive: true); } catch (_) {}
+  }
+
+  /// Déplace tous les fichiers générés (.docx/.pdf/.epub) vers export/
+  void _deplacerExports() {
+    _assurerExport();
+    try {
+      final src = Directory(_scriptsDir);
+      const exts = ['.docx', '.pdf', '.epub'];
+      for (final f in src.listSync().whereType<File>()) {
+        final name = f.uri.pathSegments.last;
+        final low = name.toLowerCase();
+        if (exts.any((e) => low.endsWith(e))) {
+          final dest = '$_exportPath\\$name';
+          try {
+            if (File(dest).existsSync()) File(dest).deleteSync();
+            f.renameSync(dest);
+          } catch (_) {
+            try { f.copySync(dest); f.deleteSync(); } catch (_) {}
+          }
+        }
+      }
+      _log('📤 Fichiers rangés dans export/.', kind: LogKind.ok);
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
@@ -142,6 +186,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
     });
     _chargerConfigSync();
+    _assurerExport();
     _chargerChapitres();
     _chargerOrganisation();
     _chargerInfos();
@@ -165,7 +210,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _flip.forward(from: 0);
   }
 
-  // ══ Navigation clavier ← / → ══
   KeyEventResult _onKey(FocusNode node, RawKeyEvent event) {
     if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
     final n = _rubanLabels.length;
@@ -194,6 +238,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         _spellLevel = (data['spellLevel'] as String?) ?? 'default';
         _spellVariant = (data['spellVariant'] as String?) ?? 'fr-FR';
         _modeGeneration = (data['modeGeneration'] as String?) ?? 'exact';
+        _formatLivre = (data['formatLivre'] as String?) ?? '15,24 x 22,86 cm (6 x 9 po)';
         _texteFont = (data['texteFont'] as String?) ?? 'Aptos';
         _titresFont = (data['titresFont'] as String?) ?? 'Cinzel';
         _texteSize = (data['texteSize'] as String?) ?? '11';
@@ -209,12 +254,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       File(_configPath).writeAsStringSync(jsonEncode({
         'scriptsDir': _scriptsDir, 'pythonPath': _pythonPath, 'spellLevel': _spellLevel,
         'spellVariant': _spellVariant, 'modeGeneration': _modeGeneration,
+        'formatLivre': _formatLivre,
         'texteFont': _texteFont, 'titresFont': _titresFont, 'texteSize': _texteSize,
         'titresSize': _titresSize, 'interligne': _interligne,
       }));
     } catch (_) {}
   }
 
+  // ══ CORRECTION : écrit « format_livre » (clé lue par les scripts Python) ══
   void _ecrireStylePython() {
     try {
       final f = File(_configRomanPath);
@@ -235,9 +282,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       style['taille_chapitre_ligne2_pt'] = tz - 1;
       style['taille_sous_chapitre_pt'] = tz - 2;
       style['interligne_corps'] = double.tryParse(_interligne) ?? 1.0;
+      style['format_livre'] = _formatLivre;   // ✅ clé lue par generer_roman.py / generer_pdf_direct.py
+      style['format_kdp'] = _formatLivre;
       d['style'] = style;
+      d['format_livre'] = _formatLivre;
       f.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(d));
-      _log('🎨 Style écrit dans Configuration_roman.json.', kind: LogKind.ok);
+      _log('🎨 Style & format écrits dans Configuration_roman.json.', kind: LogKind.ok);
     } catch (e) {
       _log('⚠️ Écriture du style impossible : $e', kind: LogKind.warn);
     }
@@ -514,8 +564,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _log('▶ $label…', kind: LogKind.head);
     _creep?.cancel();
     _creep = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if (_progressTarget < 95) {
-        setState(() { _progressTarget = (_progressTarget + 0.3).clamp(0, 95).toDouble(); });
+      if (_progressTarget < 99) {
+        setState(() { _progressTarget = (_progressTarget + 0.2).clamp(0, 99).toDouble(); });
       }
     });
     try {
@@ -535,14 +585,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final rapide = _modeGeneration == 'rapide';
     final args = rapide ? const ['--rapide'] : const <String>[];
     return _run('Génération du livre (mode ${rapide ? "rapide" : "exact"})',
-        () => _engine.runScript('generer_roman.py', args: args, onLine: _surLigne));
+        () => _engine.runScript('generer_roman.py', args: args, onLine: _surLigne)
+            .then((_) => _deplacerExports()));
   }
 
   Future<void> _exportPdf() => _run('Export PDF KDP',
-      () => _engine.runScript('generer_pdf_direct.py', onLine: _surLigne));
+      () => _engine.runScript('generer_pdf_direct.py', onLine: _surLigne)
+          .then((_) => _deplacerExports()));
 
   Future<void> _genererEbook() => _run('Génération EPUB',
-      () => _engine.runScript('generer_ebook.py', onLine: _surLigne));
+      () => _engine.runScript('generer_ebook.py', onLine: _surLigne)
+          .then((_) => _deplacerExports()));
 
   Future<void> _resumesIA() => _run('Résumés IA',
       () => _engine.runScript('IA_Roman.py', onLine: (l) => _log(l)));
@@ -555,9 +608,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _lireDocument(String type) async {
     final ext = type == 'word' ? '.docx' : (type == 'pdf' ? '.pdf' : '.epub');
-    final dir = Directory(_scriptsDir);
-    if (!dir.existsSync()) { _log('⚠️ Dossier backend introuvable.', kind: LogKind.warn); return; }
-    final fs = dir.listSync().whereType<File>().where((f) => f.path.toLowerCase().endsWith(ext)).toList();
+    final dirs = [Directory(_exportPath), Directory(_scriptsDir)];
+    List<File> fs = [];
+    for (final d in dirs) {
+      if (!d.existsSync()) continue;
+      final found = d.listSync().whereType<File>()
+          .where((f) => f.path.toLowerCase().endsWith(ext)).toList();
+      if (found.isNotEmpty) { fs = found; break; }
+    }
     if (fs.isEmpty) { _log('⚠️ Aucun fichier $ext généré.', kind: LogKind.warn); return; }
     fs.sort((a, b) => b.statSync().modified.compareTo(a.statSync().modified));
     _log('📖 Ouverture : ${fs.first.uri.pathSegments.last}', kind: LogKind.ok);
@@ -584,19 +642,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       context: context,
       builder: (ctx) => _SettingsDialog(initial: _AppSettings(
         scriptsDir: _scriptsDir, pythonPath: _pythonPath, spellLevel: _spellLevel,
-        spellVariant: _spellVariant, texteFont: _texteFont, titresFont: _titresFont,
+        spellVariant: _spellVariant, formatLivre: _formatLivre,
+        texteFont: _texteFont, titresFont: _titresFont,
         texteSize: _texteSize, titresSize: _titresSize, interligne: _interligne)),
     );
     if (res == null) return;
     setState(() {
       _scriptsDir = res.scriptsDir; _pythonPath = res.pythonPath;
       _spellLevel = res.spellLevel; _spellVariant = res.spellVariant;
+      _formatLivre = res.formatLivre;
       _texteFont = res.texteFont; _titresFont = res.titresFont;
       _texteSize = res.texteSize; _titresSize = res.titresSize; _interligne = res.interligne;
       _engine = PythonEngine(scriptsDir: _scriptsDir, pythonPath: _pythonPath);
     });
     _sauverConfig();
     _ecrireStylePython();
+    _assurerExport();
     _chargerChapitres();
     _log('⚙️ Paramètres sauvegardés.', kind: LogKind.ok);
   }
@@ -639,7 +700,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   });
 
   // ══════════════════════════════════════════════════════════════
-  //  INTERFACE — livre avec PageCurl réaliste
+  //  INTERFACE
   // ══════════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
@@ -673,14 +734,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   static const List<String> _rubanLabels = [
-    'Informations', 'Organisation', 'Correction', 'Réglages',
+    'Réglages', 'Informations', 'Organisation', 'Correction',
     'Production', 'Lecture', 'Registre', 'Contact',
   ];
   static const List<String> _rubanEmojis = [
-    '📜', '', '', '⚙', '▶', '📖', '', '🌐',
+    '⚙', '📜', '', '', '▶', '📖', '', '🌐',
   ];
   static const List<Color> _rubanCouleurs = [
-    Color(0xFF7A4A22), Color(0xFF4E8577), Color(0xFF6B3FA0), Color(0xFFB8860B),
+    Color(0xFFB8860B), Color(0xFF7A4A22), Color(0xFF4E8577), Color(0xFF6B3FA0),
     Color(0xFF8E2A2A), Color(0xFF2E4E7E), Color(0xFF2F6B3A), Color(0xFF6B5A8E),
   ];
 
@@ -771,8 +832,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ]));
   }
 
-  Widget _pageRegistre() {
-    return Padding(padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
+    Widget _pageRegistre() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _titrePage('REGISTRE'),
         _ligneRegistre('Ouvrage', _statOuvrage),
@@ -781,13 +843,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         _ligneRegistre('Pages', _statPages),
         _ligneRegistre('Chapitres', _statChapitres),
         _ligneRegistre('Illustr.', _statIllus),
-        const Spacer(),
-        const Center(child: Text('❦', style: TextStyle(fontSize: 24, color: AntiqueTheme.brass))),
         const SizedBox(height: 8),
-      ]));
+        const Center(child: Text('❦', style: TextStyle(fontSize: 24, color: AntiqueTheme.brass))),
+      ]),
+    );
   }
 
-  Widget _ligneRegistre(String k, String v) {
+Widget _ligneRegistre(String k, String v) {
     return Padding(padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(children: [
         Text(k, style: GoogleFonts.cinzel(fontSize: 12, fontWeight: FontWeight.w700,
@@ -802,20 +864,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _pageContenu(int i) {
     switch (i) {
-      case 0: return _pageInfos();
-      case 1: return _pageOrganisation();
-      case 2: return _pageCorrection();
-      case 3: return _pageReglages();
+      case 0: return _pageReglages();
+      case 1: return _pageInfos();
+      case 2: return _pageOrganisation();
+      case 3: return _pageCorrection();
       case 4: return _pageProduction();
       case 5: return _pageLecture();
       case 6: return _pageRegistre();
       case 7: return _pageContact();
-      default: return _pageInfos();
+      default: return _pageReglages();
     }
   }
 
   Widget _titrePage(String t) {
     return SectionTitle(title: t);
+  }
+
+  // ══ 0. RÉGLAGES ══
+    Widget _pageReglages() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _titrePage('RÉGLAGES'),
+        _actionPage('⚙', 'Paramètres', _ouvrirParametres),
+        _actionPage('📤', 'Dossier export', () => _ouvrirDossier('export')),
+        _actionPage('🖼', 'Dossier des images', () => _ouvrirDossier('Images')),
+        _actionPage('📁', 'Dossier des chapitres', () => _ouvrirDossier('Chapitres')),
+        _actionPage('🌐', 'Dossier traductions', () => _ouvrirDossier('Traductions')),
+        _actionPage('📥', 'Journal des erreurs', _ouvrirJournal),
+      ]),
+    );
   }
 
   // ══ 1. INFORMATIONS ══
@@ -929,34 +1007,22 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   // ══ 3. CORRECTION ══
-  Widget _pageCorrection() {
-    return Padding(padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
+    Widget _pageCorrection() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _titrePage('CORRECTION'),
         _chapitrePicker(),
         const SizedBox(height: 6),
         _actionPage('📝', 'Corriger le chapitre', _corriger),
-        const Spacer(),
-      ]));
+      ]),
+    );
   }
 
-  // ══ 4. RÉGLAGES ══
-  Widget _pageReglages() {
-    return Padding(padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _titrePage('RÉGLAGES'),
-        _actionPage('⚙', 'Paramètres', _ouvrirParametres),
-        _actionPage('🖼', 'Dossier des images', () => _ouvrirDossier('Images')),
-        _actionPage('📁', 'Dossier des chapitres', () => _ouvrirDossier('Chapitres')),
-        _actionPage('🌐', 'Dossier traductions', () => _ouvrirDossier('Traductions')),
-        _actionPage('📥', 'Journal des erreurs', _ouvrirJournal),
-        const Spacer(),
-      ]));
-  }
-
-  // ══ 5. PRODUCTION ══
-  Widget _pageProduction() {
-    return Padding(padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
+  // ══ 4. PRODUCTION ══
+    Widget _pageProduction() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _titrePage('PRODUCTION'),
         _modeSelector(),
@@ -965,26 +1031,27 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         _actionPage('🖨', 'PDF KDP noir & blanc', _exportPdf),
         _actionPage('📱', 'Ebook KDP (EPUB)', _genererEbook),
         _actionPage('🤖', 'Résumés IA', _resumesIA),
-        const Spacer(),
-      ]));
+      ]),
+    );
   }
 
-  // ══ 6. LECTURE ══
-  Widget _pageLecture() {
-    return Padding(padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
+  // ══ 5. LECTURE ══
+    Widget _pageLecture() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _titrePage('LECTURE'),
         _actionPage('📖', 'Lire le Word', () => _lireDocument('word')),
         _actionPage('📄', 'Lire le PDF', () => _lireDocument('pdf')),
         _actionPage('📚', "Lire l'EPUB", () => _lireDocument('epub')),
-        const Spacer(),
-        Text('Ouvre le dernier fichier généré avec\nl\'application par défaut de Windows.',
+        const SizedBox(height: 12),
+        Text('Ouvre le dernier fichier généré (dossier export)\navec l\'application par défaut de Windows.',
             textAlign: TextAlign.center, style: AntiqueTheme.titlePage.copyWith(fontSize: 12)),
-        const SizedBox(height: 8),
-      ]));
+      ]),
+    );
   }
 
-  // ══ 7. CONTACT (NOUVEAU) ══
+  // ══ 7. CONTACT ══
   Widget _pageContact() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -1009,14 +1076,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Restons en contact',
-                  style: GoogleFonts.cinzel(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AntiqueTheme.inkSepia,
-                  ),
-                ),
+                Text('Restons en contact',
+                  style: GoogleFonts.cinzel(fontSize: 18, fontWeight: FontWeight.w600,
+                      color: AntiqueTheme.inkSepia)),
                 const SizedBox(height: 12),
                 _contactLine('📧', 'Email', 'contact@danoeecrivain.net'),
                 _contactLine('🌐', 'Site web', 'danoeecrivain.net'),
@@ -1031,29 +1093,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Widget _contactLine(String icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Text(icon, style: const TextStyle(fontSize: 18)),
-          const SizedBox(width: 12),
-          Text(
-            '$label : ',
-            style: GoogleFonts.cinzel(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AntiqueTheme.inkSepia,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: GoogleFonts.crimsonText(
-                fontSize: 14,
-                color: AntiqueTheme.inkSepia.withOpacity(0.8),
-              ),
-            ),
-          ),
-        ],
-      ),
+      child: Row(children: [
+        Text(icon, style: const TextStyle(fontSize: 18)),
+        const SizedBox(width: 12),
+        Text('$label : ',
+          style: GoogleFonts.cinzel(fontSize: 14, fontWeight: FontWeight.w600,
+              color: AntiqueTheme.inkSepia)),
+        Expanded(child: Text(value,
+          style: GoogleFonts.crimsonText(fontSize: 14,
+              color: AntiqueTheme.inkSepia.withOpacity(0.8)))),
+      ]),
     );
   }
 
@@ -1172,6 +1221,7 @@ class _SettingsDialogState extends State<_SettingsDialog> {
   late final TextEditingController _py = TextEditingController(text: widget.initial.pythonPath);
   late String _level = widget.initial.spellLevel;
   late String _variant = widget.initial.spellVariant;
+  late String _formatLivre = widget.initial.formatLivre;
   late String _texteFont = widget.initial.texteFont;
   late String _titresFont = widget.initial.titresFont;
   late String _texteSize = widget.initial.texteSize;
@@ -1212,9 +1262,13 @@ class _SettingsDialogState extends State<_SettingsDialog> {
           _dropdown(value: _label(_variantLabels, _variant, 'fr-FR'), items: _variantLabels.values.toList(),
               onChanged: (v) => setState(() => _setCode(_variantLabels, v!, (c) => _variant = c))),
           const SizedBox(height: 16),
-          Text('📖 STYLE DU LIVRE',
+          Text('📖 STYLE & FORMAT DU LIVRE',
               style: GoogleFonts.cinzel(fontSize: 14, fontWeight: FontWeight.w700, color: AntiqueTheme.agedGold)),
           const SizedBox(height: 8),
+          _labelChamp('Format du livre final (KDP)'),
+          _dropdown(value: _dans(kFormats, _formatLivre), items: kFormats,
+              onChanged: (v) => setState(() => _formatLivre = v!)),
+          const SizedBox(height: 12),
           _labelChamp('Police du corps de texte'),
           _dropdown(value: _dans(kPolices, _texteFont), items: kPolices,
               onChanged: (v) => setState(() => _texteFont = v!)),
@@ -1242,7 +1296,8 @@ class _SettingsDialogState extends State<_SettingsDialog> {
               style: FilledButton.styleFrom(backgroundColor: AntiqueTheme.verdigris, foregroundColor: Colors.black),
               onPressed: () => Navigator.pop(context, _AppSettings(
                 scriptsDir: _dir.text.trim(), pythonPath: _py.text.trim(), spellLevel: _level,
-                spellVariant: _variant, texteFont: _texteFont, titresFont: _titresFont,
+                spellVariant: _variant, formatLivre: _formatLivre,
+                texteFont: _texteFont, titresFont: _titresFont,
                 texteSize: _texteSize, titresSize: _titresSize, interligne: _interligne)),
               child: const Text('Sauvegarder')),
           ]),

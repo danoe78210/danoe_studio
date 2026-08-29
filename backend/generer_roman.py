@@ -80,19 +80,8 @@ NB_ILLUSTRATIONS = 0
 STATS_CHAPITRES = []
 SANS_TITRE = ('1.1',)
 
-FORMATS_LIVRE = [
-    ('5 x 8 po', 12.7, 20.32),
-    ('5.06 x 7.81 po', 12.85, 19.84),
-    ('5.25 x 8 po', 13.34, 20.32),
-    ('5.5 x 8.5 po', 13.97, 21.59),
-    ('6 x 9 po', 15.24, 22.86),
-    ('6.14 x 9.21 po', 15.6, 23.4),
-    ('7 x 10 po', 17.78, 25.4),
-    ('8 x 10 po', 20.32, 25.4),
-    ('8.5 x 8.5 po', 21.59, 21.59),
-    ('8.5 x 11 po', 21.59, 27.94),
-    ('A4', 21.0, 29.7),
-]
+import regles as _R
+FORMATS_LIVRE = _R.FORMATS_LIVRE
 
 # ─────────────────────────────────────────────
 # 2. CONFIGURATION UNIQUE (3 onglets)
@@ -271,25 +260,7 @@ def _num(v, defaut):
         return defaut
 
 
-def dimensions_pour_format(label):
-    s = str(label).lower().strip().replace(',', '.')
-    for nom, w, h in FORMATS_LIVRE:
-        if nom.lower() == s or s == nom.lower().replace(' po', ''):
-            return w, h
-    if 'a4' in s:
-        return 21.0, 29.7
-    m = re.search(r'(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)', s)
-    if m:
-        w, h = float(m.group(1)), float(m.group(2))
-        if 'mm' in s:
-            return w / 10.0, h / 10.0
-        if 'cm' in s and 'po' not in s:
-            return w, h
-        return w * 2.54, h * 2.54
-    for nom, w, h in FORMATS_LIVRE:
-        if nom.lower() in s:
-            return w, h
-    return 17.78, 25.4
+dimensions_pour_format = _R.dimensions_pour_format
 
 
 def verifier_formats():
@@ -371,19 +342,42 @@ def lire_style():
     return s
 
 
+def _lire_json_brut():
+    try:
+        import json
+        with open(CHEMIN_CONFIG_JSON, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+def _lire_json_brut():
+    try:
+        import json
+        with open(CHEMIN_CONFIG_JSON, encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return None
+
 def lire_infos():
     infos = {l: '' for l in CHAMPS_LABELS}
     source = 'défaut'
+    ji = (_lire_json_brut() or {}).get('informations', {}) or {}
+    for label in CHAMPS_LABELS:
+        for k, v in ji.items():
+            if v is not None and str(v).strip() and nettoyer(k).lower().startswith(CORRESPONDANCES[label]):
+                infos[label] = nettoyer(v)
+                source = 'JSON'
+                break
     if JSON_OK:
         try:
             data = cs.charger_configuration()
-            j = data.get('informations', {})
+            jj = (data or {}).get('informations', {}) or {}
             for label, cle in JSON_INFOS_KEYS.items():
-                v = j.get(cle, '')
-                if v:
+                v = jj.get(cle, '')
+                if v and not infos[label]:
                     infos[label] = str(v).strip()
-            if any(infos.values()):
-                source = 'JSON'
+                    if source == 'défaut':
+                        source = 'JSON'
         except Exception:
             pass
     if source == 'défaut' and os.path.isfile(CHEMIN_CONFIG):
@@ -404,7 +398,6 @@ def lire_infos():
                     break
     infos['_source'] = source
     return infos
-
 
 def lire_organisation():
     if JSON_OK:
@@ -483,69 +476,13 @@ def lire_organisation():
 # ─────────────────────────────────────────────
 # 4. CORRECTIONS & CONVERSIONS TYPOGRAPHIQUES
 # ─────────────────────────────────────────────
-CORRECTIONS_COMMUNES = [
-    ('⁠', ''),
-    ('﻿', ''),
-    ('--- ', '— '),
-    (' …', '…'),
-    ("'", '’'),
-    ('pu is', 'puis'),
-    ('. . ', '. '),
-    ('.À', '. À'),
-    ('cératopsiens ,', 'cératopsiens,'),
-    ("de s'approchaient", "de s'approcher"),
-    ('ils émettait', 'ils émettaient')
-]
-
-REGEX_PENSEES = [
-    (re.compile(r'"([^"]+)"'), '«\u00a0\\1\u00a0»')
-]
-
-CORRECTIONS_PROLOGUE = [
-    ('E t si', 'Et si'),
-    ('XIIe siècle', 'XIIᵉ siècle')
-]
-
-CORRECTIONS_CH1 = [
-    ('une par inhérente', 'une part inhérente'),
-    ('me pousser à', 'me pousse à'),
-    ('l’Étranger. il observe', 'l’Étranger. Il observe'),
-    ('L’ombre, m’observe.', 'L’ombre m’observe.'),
-    ('pas d’atmosphère se dissipe', 'pas d’atmosphère qui se dissipe')
-]
-
-CORRECTIONS_CH2 = [
-    ('Ute tension insupportable', 'Une tension insupportable'),
-    ('Ute chance de naître', 'Une chance de naître'),
-    ('Mon regard se live', 'Mon regard se lève'),
-    ('ma traversé ,', 'ma traversée,'),
-    ('ma traversé,', 'ma traversée,'),
-    ('La Lumiere éclate', 'La lumière éclate'),
-    ('Je le survole.', 'Je la survole.'),
-    ('s’harmonise, créé une', 's’harmonise, crée une'),
-    ('fait créé une', 'fait crée une'),
-    ('Nunael', 'Nunaël'),
-    ('me défier ainsi ?', 'me défier ainsi ? »'),
-    ('Quand il sera trop tard ?', 'Quand il sera trop tard ? »'),
-    ('si la fin est toujours la même ?', 'si la fin est toujours la même ? »'),
-    ('« Mais ils auront existé.', '« Mais ils auront existé. »'),
-    ('je combats !', 'je combats ! »'),
-    ('même si je ne peux pas l’anéantir.', 'même si je ne peux pas l’anéantir. »'),
-    ('a créé …. Et', 'a créé… Et')
-]
-
-CORR_PAR_PREFIXE = {
-    '1.1': CORRECTIONS_PROLOGUE,
-    '2.1': CORRECTIONS_CH1,
-    '2.2': CORRECTIONS_CH2
-}
-
+CORRECTIONS_COMMUNES = _R.CORRECTIONS_COMMUNES
+CORR_PAR_PREFIXE = _R.CORR_PAR_PREFIXE
+REGEX_PENSEES = _R.REGEX_PENSEES
 
 def corr_pour(fichier):
-    for pref, corr in CORR_PAR_PREFIXE.items():
-        if fichier.startswith(pref):
-            return corr
-    return []
+    return _R.corrections_pour(fichier)
+
 
 # ─────────────────────────────────────────────
 # 5. CHARGEMENT MARKDOWN → STRUCTURE WORD
@@ -977,15 +914,28 @@ def ajouter_page_illustration(chemin, libelle, legende='',
         ligne_vide(6)
     if chemin and os.path.isfile(chemin):
         try:
-            max_l = largeur_illustration()
+            # ✅ CORRECTION : taille adaptée AU FORMAT DU LIVRE (pas aux marges de section)
+            max_l = max(5.0, min(12.0, STYLE['largeur_cm'] - 3.0))
             max_h = max(5.0, STYLE['hauteur_cm'] - 3.8)
             dims = dimensions_image_pour_page(chemin, max_l, max_h)
             w_cm = dims[0] if dims else max_l
             chemin_hd = image_haute_definition(chemin, w_cm)
+            if centrage_vertical:
+                from docx.enum.text import WD_LINE_SPACING as _WLS
+                _h = dims[1] if dims else w_cm
+                _dispo = STYLE['hauteur_cm'] - 3.8
+                _res = 1.2 if legende else 0.0
+                _haut = max(0.0, (_dispo - _h - _res) / 2.0)
+                _sp = doc.add_paragraph()
+                _sp.paragraph_format.space_before = Pt(0)
+                _sp.paragraph_format.space_after = Pt(0)
+                _sp.paragraph_format.line_spacing_rule = _WLS.EXACTLY
+                _sp.paragraph_format.line_spacing = Cm(_haut)
             if dims:
                 doc.add_picture(chemin_hd, width=Cm(dims[0]), height=Cm(dims[1]))
             else:
                 doc.add_picture(chemin_hd, width=Cm(w_cm))
+            # ✅ CORRECTION : centrage horizontal garanti
             par = doc.paragraphs[-1]
             par.alignment = WD_ALIGN_PARAGRAPH.CENTER
             par.paragraph_format.space_before = Pt(0)
@@ -1012,7 +962,6 @@ def ajouter_page_illustration(chemin, libelle, legende='',
         run_style(pl, legende, POLICE_CORPS, 9, italique=True)
     if not centrage_vertical:
         ligne_vide(6)
-
 
 def ajouter_chapitre(titre, items, sans_titre=False):
     if not sans_titre:
@@ -1057,28 +1006,9 @@ def ajouter_chapitre(titre, items, sans_titre=False):
 # ─────────────────────────────────────────────
 # 7. MARGES KDP (v2.9.4 : SYMÉTRIQUES, barème officiel + sécurité)
 # ─────────────────────────────────────────────
-KDP_GOUTTIERE_POUCES = [
-    (150, 0.375),
-    (300, 0.500),
-    (500, 0.625),
-    (700, 0.750),
-    (828, 0.875),
-]
-SECURITE_PO = 0.125
-
-
-def gouttiere_kdp_pour(pages):
-    for maxi, g in KDP_GOUTTIERE_POUCES:
-        if pages <= maxi:
-            return g
-    return 0.875
-
-
-def marge_kdp_pour(pages):
-    """v2.9.4 : marge SYMÉTRIQUE appliquée aux 4 côtés (gauche/droite) :
-    gouttière officielle du palier + garde. Toujours ≥ 0,25 po à l'extérieur."""
-    return gouttiere_kdp_pour(pages) + SECURITE_PO
-
+gouttiere_kdp_pour = _R.gouttiere_kdp_pour
+marge_kdp_pour = _R.marge_kdp_pour
+MARGES_SYMETRIQUES = _R.MARGES_SYMETRIQUES
 
 def calculer_marges_kdp(mots, nb_actes, nb_chapitres):
     pages = 120.0
@@ -1347,9 +1277,11 @@ def maj_champs_word(nom_fichier):
             except Exception:
                 pass
         d.Save()
+        pages = d.ComputeStatistics(2)
         d.Close(False)
         d = None
         print('   ✅ TDM et champs mis à jour dans le fichier final.')
+        return pages
     except Exception as e:
         print('   ⚠️  Mise à jour Word impossible : ' + str(e))
     finally:
@@ -1605,27 +1537,22 @@ def main():
     nom_fichier = enregistrer_docx_securise(doc, nom_fichier)
 
     # ── v2.9.4 : convergence des marges sur le nombre de pages RÉEL ──
-    for _passe in range(2):
-        n_reel = compter_pages_reelles(nom_fichier)
-        if not n_reel:
-            break
-        m_cible = marge_kdp_pour(n_reel)
-        if abs(m_cible - gutter) < 0.001:
-            break
-        gutter = m_cible
-        for sec in doc.sections:
-            sec.left_margin = Inches(gutter)
-            sec.right_margin = Inches(gutter)
-        print('   📏 Palier réel ' + str(n_reel) + ' pages → marge symétrique ' +
-              format(gutter, '.3f') + ' po · ré-enregistrement…')
-        nom_fichier = enregistrer_docx_securise(doc, nom_fichier)
-
     print('✅ Document généré avec succès !')
     print('   📁 ' + nom_fichier)
-    maj_champs_word(nom_fichier)
     print('   📑 Comptage des pages réelles via Word…')
-    pages_reelles = compter_pages_reelles(nom_fichier)
-    afficher_statistiques(pages_reelles, titre_aff)
+    pages_reelles = maj_champs_word(nom_fichier)
+    if not pages_reelles:
+        pages_reelles = compter_pages_reelles(nom_fichier)
+    if pages_reelles:
+        m_cible = marge_kdp_pour(pages_reelles)
+        if abs(m_cible - gutter) >= 0.001:
+            gutter = m_cible
+            for sec in doc.sections:
+                sec.left_margin = Inches(gutter)
+                sec.right_margin = Inches(gutter)
+            nom_fichier = enregistrer_docx_securise(doc, nom_fichier)
+            pages_reelles = maj_champs_word(nom_fichier) or pages_reelles
+        afficher_statistiques(pages_reelles, titre_aff)
 
 
 if __name__ == '__main__':

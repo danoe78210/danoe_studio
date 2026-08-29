@@ -95,13 +95,15 @@ def lire_infos():
     j = _lire_json()
     for cle, val in ((j or {}).get('informations', {}) or {}).items():
         if val: infos[cle.lower()] = nettoyer(val)
-    try:
-        from openpyxl import load_workbook
-        wb = load_workbook(CHEMIN_CONFIG, data_only=True)
-        ws = wb['Informations']
-        for row in ws.iter_rows(values_only=True):
-            if row and row[0]: infos[nettoyer(row[0]).lower()] = nettoyer(row[1])
-    except Exception: pass
+    if not infos:
+        try:
+            from openpyxl import load_workbook
+            wb = load_workbook(CHEMIN_CONFIG, data_only=True)
+            ws = wb['Informations']
+            for row in ws.iter_rows(values_only=True):
+                if row and row[0]: infos[nettoyer(row[0]).lower()] = nettoyer(row[1])
+        except Exception:
+            pass
     return infos
 
 def lire_organisation():
@@ -156,6 +158,7 @@ CORRECTIONS_COMMUNES = [('\u2060', ''), ('\ufeff', ''), ('--- ', '\u2014 '),
                         ("de s'approchaient", "de s'approcher"), ('ils émettait', 'ils émettaient')]
 # v2.0 : espaces SÉCABLES autour des guillemets (évite les blocs incassables)
 REGEX_PENSEES = [(re.compile(r'"([^"]+)"'), '« \\1 »')]
+CORR_PAR_PREFIXE = {'1.1': [], '2.1': [], '2.2': []}
 META_RE = re.compile(r'^(titre|œuvre|oeuvre|auteur|pages_pdf|nombre_de_pages|source|'
                      r'version|d[ée]p[ôo]t_l[ée]gal|langue)\s*:', re.IGNORECASE)
 
@@ -173,6 +176,9 @@ def charger_chapitre(fichier, skip_titre):
     if not cand: return None
     texte = open(cand[0], encoding='utf-8').read()
     for a, b in CORRECTIONS_COMMUNES: texte = texte.replace(a, b)
+    for pref, corr in CORR_PAR_PREFIXE.items():
+        if fichier.startswith(pref):
+            for a, b in corr: texte = texte.replace(a, b)
     texte = _nettoie_espaces(texte)
     while '  ' in texte: texte = texte.replace('  ', ' ')
     items = []
@@ -330,7 +336,7 @@ def generer(safe=False):
     for maxi, g, o in KDP_MARGES:
         if pages_est <= maxi: gut, out = g, o; break
     else: gut, out = .875, .625
-    MARGES = (gut * 72, out * 72, 1.9 * cm, 1.9 * cm)
+    m_sym = gut + 0.125; MARGES = (m_sym * 72, m_sym * 72, 1.9 * cm, 1.9 * cm)
     PAD = 4.0 if safe else 2.0
     print(f'   📏 Marges KDP : gouttière {gut:.3f} po · extérieure {out:.3f} po (~{int(pages_est)} pages)'
           + ('  [mode sécurisé]' if safe else ''))
@@ -364,7 +370,7 @@ def generer(safe=False):
                 max_h = STYLE['hauteur_cm'] - 3.8
                 if h_cm > max_h: h_cm, w_cm = max_h, max_h * pw / ph
                 st.append(Spacer(1, max(0, (H - 3.8 * cm - h_cm * cm) / 2)))
-                st.append(RLImage(ch_hd, width=w_cm * cm, height=h_cm * cm))
+                img = RLImage(ch_hd, width=w_cm * cm, height=h_cm * cm); img.hAlign = 'CENTER'; st.append(img)
                 if b.get('legende'): st.append(Paragraph(escape(b['legende']), st_leg))
             segments.append({'type': 'image', 'story': st, 'entete': None})
         elif b['type'] == 'acte':
@@ -418,7 +424,7 @@ def generer(safe=False):
     toc = [Spacer(1, 2 * cm), Paragraph('Table des matières', st_ch1), Spacer(1, 1 * cm)]
     for t, p in entrees:
         pts = max(3, 70 - len(t))
-        toc.append(Paragraph(f'{escape(t)} {"." * pts} {p - (debut_num or 1) + 1}', st_toc))
+        toc.append(Paragraph(f'{escape(t)} {"." * pts} {p if p < (debut_num or 1) else p - (debut_num or 1) + 1}', st_toc))
     buf = rendre(toc, W, H, MARGES, {'F': F, 'entete': None, 'debut_num': 10 ** 9, 'pad': PAD}, running - 1)
     for p in PdfReader(buf).pages: writer.add_page(p)
 
@@ -433,7 +439,38 @@ def generer(safe=False):
           f'(attendu {W:.0f} x {H:.0f})')
     print(f'✅ PDF KDP prêt ({len(PdfReader(nom).pages)} pages) : {nom}')
 
+def _convert_word_pdf(docx_path, pdf_path):
+    import win32com.client
+    word = win32com.client.Dispatch('Word.Application'); word.Visible = False
+    try: word.DisplayAlerts = 0; word.AutomationSecurity = 3
+    except Exception: pass
+    d = word.Documents.Open(os.path.abspath(docx_path), False, True, False)
+    try: d.ExportAsFixedFormat(os.path.abspath(pdf_path), 17, False, 0)
+    finally: d.Close(False); word.Quit()
+
+def generer_depuis_word():
+    import glob, subprocess, time
+    c = glob.glob(os.path.join(BASE, '*_KDP.docx')) + glob.glob(os.path.join(BASE, 'export', '*_KDP.docx'))
+    if not c: return False
+    dx = max(c, key=os.path.getmtime); pf = os.path.splitext(dx)[0] + '.pdf'
+    for _ in range(5):
+        try:
+            if os.path.exists(pf): os.remove(pf)
+            break
+        except Exception: time.sleep(0.3)
+    print('   🖨 Conversion Word→PDF (vos modifs incluses)…')
+    try:
+        r = subprocess.run([sys.executable, os.path.abspath(__file__), '--convert', dx, pf], timeout=180, capture_output=True, text=True)
+        if r.returncode == 0 and os.path.isfile(pf):
+            print('✅ PDF KDP prêt (converti depuis Word) : ' + pf); return True
+        return False
+    except subprocess.TimeoutExpired:
+        print('   ⚠️ Word trop lent (>180 s) → génération directe.'); return False
+
 def main():
+    if '--direct' not in sys.argv[1:] and generer_depuis_word():
+        return
+
     try:
         generer(safe=False)
     except Exception as e:
@@ -441,4 +478,8 @@ def main():
         generer(safe=True)
 
 if __name__ == '__main__':
-    main()
+    if '--convert' in sys.argv[1:]:
+        _i = sys.argv.index('--convert')
+        _convert_word_pdf(sys.argv[_i + 1], sys.argv[_i + 2])
+    else:
+        main()
