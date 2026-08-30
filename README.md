@@ -10,7 +10,7 @@ Danoë Studio transforme vos chapitres Markdown en **livres brochés professionn
 
 ## 📥 Téléchargement
 
-👉 **[Télécharger Danoë Studio v3.1](https://github.com/danoe78210/danoe_studio/releases/tag/v3.1)**
+👉 **[Télécharger Danoë Studio v3.2](https://github.com/danoe78210/danoe_studio/releases/tag/v3.2)**
 
 Décompressez `DanoeStudio-Windows-v3.1.zip` et lancez `danoestudio.exe`. **Aucune installation requise.**
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:path/path.dart' as path;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -606,7 +607,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _trackProgress(l);
   }
 
-  Future<void> _lireDocument(String type) async {
+    
+
+  Future<void> _lireResume() async {
+    try {
+      Directory dir = Directory.current;
+      Directory? backend;
+      for (int i = 0; i < 6; i++) {
+        final cand = Directory(path.join(dir.path, 'backend'));
+        if (cand.existsSync() && File(path.join(cand.path, 'generer_roman.py')).existsSync()) { backend = cand; break; }
+        final parent = dir.parent;
+        if (parent.path == dir.path) break;
+        dir = parent;
+      }
+      if (backend == null) { _afficherMsg('Dossier backend introuvable'); return; }
+      final resumePath = path.join(backend.path, 'Résumé.md');
+      if (!File(resumePath).existsSync()) { _afficherMsg('« Résumé.md » introuvable. Générez-le via « Résumés IA » (menu Production).'); return; }
+      if (Platform.isWindows) { await Process.run('cmd', ['/c', 'start', '', resumePath]); }
+      else if (Platform.isMacOS) { await Process.run('open', [resumePath]); }
+      else { await Process.run('xdg-open', [resumePath]); }
+      _log('📝 Ouverture du résumé : ' + resumePath);
+    } catch (e) { _afficherMsg('Erreur ouverture résumé : ' + e.toString()); }
+  }
+
+  void _afficherMsg(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+Future<void> _lireDocument(String type) async {
     final ext = type == 'word' ? '.docx' : (type == 'pdf' ? '.pdf' : '.epub');
     final dirs = [Directory(_exportPath), Directory(_scriptsDir)];
     List<File> fs = [];
@@ -1044,6 +1073,7 @@ Widget _ligneRegistre(String k, String v) {
         _actionPage('📖', 'Lire le Word', () => _lireDocument('word')),
         _actionPage('📄', 'Lire le PDF', () => _lireDocument('pdf')),
         _actionPage('📚', "Lire l'EPUB", () => _lireDocument('epub')),
+        _actionPage('📝', 'Lire le résumé', _lireResume),
         const SizedBox(height: 12),
         Text('Ouvre le dernier fichier généré (dossier export)\navec l\'application par défaut de Windows.',
             textAlign: TextAlign.center, style: AntiqueTheme.titlePage.copyWith(fontSize: 12)),

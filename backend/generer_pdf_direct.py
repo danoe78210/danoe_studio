@@ -343,11 +343,31 @@ def generer(safe=False):
 
     # ── construction des segments ──
     segments = []
-    lim = [Paragraph(escape((INFOS.get('titre complet du roman', '') or 'Titre').upper()), st_acte),
-           Paragraph(escape(INFOS.get('sous-titre éventuel', '') or ''), st_ch2),
-           Spacer(1, 2 * cm), Paragraph(escape(INFOS.get("nom de l'auteur (couverture)", '') or ''), st_ch2),
-           PageBreak(), Paragraph(escape(f'© {INFOS.get("année de publication", "2026")} '
-                                         f'{INFOS.get("nom de l\'auteur (couverture)", "")}. Tous droits réservés.'), st_lim)]
+    _tit = INFOS.get('titre complet du roman', '') or 'Titre'
+    _aut = INFOS.get("nom de l'auteur (couverture)", '') or 'Auteur'
+    _ann = INFOS.get('année de publication', '2026')
+    lim = [Paragraph(escape(_tit.upper()), st_acte),
+    Paragraph(escape(INFOS.get('sous-titre éventuel', '') or ''), st_ch2),
+    Spacer(1, 2 * cm), Paragraph(escape(_aut), st_ch2), PageBreak()]
+    # page copyright (identique au Word)
+    _cop = [Paragraph(escape((_tit + ' – ' + INFOS['sous-titre éventuel']) if INFOS.get('sous-titre éventuel') else _tit), st_lim)]
+    _cop.append(Spacer(1, 0.6 * cm))
+    _cop.append(Paragraph(escape(INFOS.get('mention de copyright', '') or ('© ' + _ann + ' ' + _aut + '. Tous droits réservés.')), st_lim))
+    _cop.append(Spacer(1, 0.3 * cm))
+    _meta = ' – '.join(x for x in [INFOS.get('édition', ''), _ann] if x)
+    if _meta: _cop.append(Paragraph(escape(_meta), st_lim))
+    if INFOS.get('isbn'): _cop.append(Paragraph('ISBN : ' + escape(INFOS['isbn']), st_lim))
+    if INFOS.get('dépôt légal'): _cop.append(Paragraph('Dépôt légal : ' + escape(INFOS['dépôt légal']), st_lim))
+    if INFOS.get("maison d'édition"):
+        _cop.append(Spacer(1, 0.3 * cm)); _cop.append(Paragraph(escape(INFOS["maison d'édition"]), st_lim))
+    _cop.append(Spacer(1, 0.6 * cm))
+    for _t in ['Toute reproduction, même partielle, est interdite sans l’autorisation',
+    'préalable de l’auteur, conformément aux dispositions de la législation',
+    'en vigueur sur la propriété intellectuelle.']:
+        _cop.append(Paragraph(escape(_t), st_lim))
+    if INFOS.get('site web'):
+        _cop.append(Spacer(1, 0.3 * cm)); _cop.append(Paragraph(escape(INFOS['site web']), st_lim))
+    lim += _cop
     if INFOS.get('dédicace'):
         lim += [PageBreak()] + [Paragraph(escape(x), st_ch2) for x in INFOS['dédicace'].splitlines() if x.strip()]
     if INFOS.get('épigraphe'):
