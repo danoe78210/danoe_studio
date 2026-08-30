@@ -133,12 +133,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final TextEditingController _iDedicace = TextEditingController();
   final TextEditingController _iEpigraphe = TextEditingController();
 
-  String _statOuvrage = '—';
-  String _statFormat = '—';
-  String _statMots = '—';
-  String _statPages = '—';
-  String _statChapitres = '—';
-  String _statIllus = '—';
+
+
+
+
+
+
 
   String get _configPath {
     final home = Platform.environment['USERPROFILE'] ?? '.';
@@ -861,7 +861,55 @@ Future<void> _lireDocument(String type) async {
     ]));
   }
 
-    Widget _pageRegistre() {
+      String _valeurRegistre(String cle) {
+    Directory? backend;
+    Directory dir = Directory.current;
+    for (int i = 0; i < 6; i++) {
+      final cand = Directory(path.join(dir.path, 'backend'));
+      if (cand.existsSync() && File(path.join(cand.path, 'generer_roman.py')).existsSync()) { backend = cand; break; }
+      final parent = dir.parent;
+      if (parent.path == dir.path) break;
+      dir = parent;
+    }
+    final cands = <String>[];
+    if (backend != null) {
+      cands.add(path.join(backend.path, 'registre.json'));
+      cands.add(path.join(backend.path, 'export', 'registre.json'));
+      cands.add(path.join(backend.path, 'statistiques.json'));
+      cands.add(path.join(backend.path, 'export', 'statistiques.json'));
+    }
+    cands.add('registre.json');
+    for (final c in cands) {
+      try {
+        final f = File(c);
+        if (!f.existsSync()) continue;
+        final d = jsonDecode(f.readAsStringSync());
+        if (d is Map) {
+          for (final k in d.keys) {
+            if (k.toString().trim() == cle) {
+              final v = d[k].toString().trim();
+              if (v.isNotEmpty) return v;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    return '—';
+  }
+
+
+
+
+
+
+
+    String _statOuvrage = '—';
+  String _statFormat = '—';
+  String _statMots = '—';
+  String _statPages = '—';
+  String _statChapitres = '—';
+  String _statIllus = '—';
+  Widget _pageRegistre() {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

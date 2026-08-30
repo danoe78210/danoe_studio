@@ -1,5 +1,5 @@
 {
-  "version": "1.1",
+  "version": "1.14",
   "formats_livre": [
     [
       "5 x 8 po",
@@ -82,5 +82,172 @@
     ],
     "garde_po": 0.125,
     "symetriques": true
-  }
+  },
+  "typographie_defaut": {
+    "police_corps": "Aptos",
+    "police_titres": "Cinzel",
+    "taille_corps_pt": 11,
+    "interligne": 1.0,
+    "retrait_premiere_ligne_cm": 0.5
+  },
+  "mise_en_page": {
+    "centrage_horizontal_images": true,
+    "marges_haut_bas_cm": 1.9
+  },
+  "corrections_communes": [
+    [
+      "⁠",
+      ""
+    ],
+    [
+      "﻿",
+      ""
+    ],
+    [
+      "--- ",
+      "— "
+    ],
+    [
+      " …",
+      "…"
+    ],
+    [
+      "'",
+      "’"
+    ],
+    [
+      "pu is",
+      "puis"
+    ],
+    [
+      ". . ",
+      ". "
+    ],
+    [
+      ".À",
+      ". À"
+    ],
+    [
+      "cératopsiens ,",
+      "cératopsiens,"
+    ],
+    [
+      "de s'approchaient",
+      "de s'approcher"
+    ],
+    [
+      "ils émettait",
+      "ils émettaient"
+    ]
+  ],
+  "corrections_par_chapitre": {
+    "1.1": [
+      [
+        "E t si",
+        "Et si"
+      ],
+      [
+        "XIIe siècle",
+        "XIIᵉ siècle"
+      ]
+    ],
+    "2.1": [
+      [
+        "une par inhérente",
+        "une part inhérente"
+      ],
+      [
+        "me pousser à",
+        "me pousse à"
+      ],
+      [
+        "l’Étranger. il observe",
+        "l’Étranger. Il observe"
+      ],
+      [
+        "L’ombre, m’observe.",
+        "L’ombre m’observe."
+      ],
+      [
+        "pas d’atmosphère se dissipe",
+        "pas d’atmosphère qui se dissipe"
+      ]
+    ],
+    "2.2": [
+      [
+        "Ute tension insupportable",
+        "Une tension insupportable"
+      ],
+      [
+        "Ute chance de naître",
+        "Une chance de naître"
+      ],
+      [
+        "Mon regard se live",
+        "Mon regard se lève"
+      ],
+      [
+        "ma traversé ,",
+        "ma traversée,"
+      ],
+      [
+        "ma traversé,",
+        "ma traversée,"
+      ],
+      [
+        "La Lumiere éclate",
+        "La lumière éclate"
+      ],
+      [
+        "Je le survole.",
+        "Je la survole."
+      ],
+      [
+        "s’harmonise, créé une",
+        "s’harmonise, crée une"
+      ],
+      [
+        "fait créé une",
+        "fait crée une"
+      ],
+      [
+        "Nunael",
+        "Nunaël"
+      ],
+      [
+        "me défier ainsi ?",
+        "me défier ainsi ? »"
+      ],
+      [
+        "Quand il sera trop tard ?",
+        "Quand il sera trop tard ? »"
+      ],
+      [
+        "si la fin est toujours la même ?",
+        "si la fin est toujours la même ? »"
+      ],
+      [
+        "« Mais ils auront existé.",
+        "« Mais ils auront existé. »"
+      ],
+      [
+        "je combats !",
+        "je combats ! »"
+      ],
+      [
+        "même si je ne peux pas l’anéantir.",
+        "même si je ne peux pas l’anéantir. »"
+      ],
+      [
+        "a créé …. Et",
+        "a créé… Et"
+      ]
+    ]
+  },
+  "regex_pensees": [
+    [
+      "\"([^\"]+)\"",
+      "« \\1 »"
+    ]
+  ]
 }

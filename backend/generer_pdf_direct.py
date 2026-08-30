@@ -28,6 +28,7 @@ from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame, Paragraph,
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from pypdf import PdfReader, PdfWriter
+import regles as _R
 
 FORMATS_LIVRE = [('5 x 8 po', 12.7, 20.32), ('5.06 x 7.81 po', 12.85, 19.84),
                  ('5.25 x 8 po', 13.34, 20.32), ('5.5 x 8.5 po', 13.97, 21.59),
@@ -176,6 +177,7 @@ def charger_chapitre(fichier, skip_titre):
     if not cand: return None
     texte = open(cand[0], encoding='utf-8').read()
     for a, b in CORRECTIONS_COMMUNES: texte = texte.replace(a, b)
+    for a, b in _R.corrections_pour(fichier): texte = texte.replace(a, b)
     for pref, corr in CORR_PAR_PREFIXE.items():
         if fichier.startswith(pref):
             for a, b in corr: texte = texte.replace(a, b)
@@ -349,8 +351,11 @@ def generer(safe=False):
     lim = [Paragraph(escape(_tit.upper()), st_acte),
     Paragraph(escape(INFOS.get('sous-titre éventuel', '') or ''), st_ch2),
     Spacer(1, 2 * cm), Paragraph(escape(_aut), st_ch2), PageBreak()]
-    # page copyright (identique au Word)
-    _cop = [Paragraph(escape((_tit + ' – ' + INFOS['sous-titre éventuel']) if INFOS.get('sous-titre éventuel') else _tit), st_lim)]
+    _larg_utile = STYLE['largeur_cm'] * cm - 4 * cm
+    _haut_utile = H - 3.8 * cm
+    # Page 2 : copyright – texte en BAS de page
+    _cop = []
+    _cop.append(Paragraph(escape((_tit + ' – ' + INFOS['sous-titre éventuel']) if INFOS.get('sous-titre éventuel') else _tit), st_lim))
     _cop.append(Spacer(1, 0.6 * cm))
     _cop.append(Paragraph(escape(INFOS.get('mention de copyright', '') or ('© ' + _ann + ' ' + _aut + '. Tous droits réservés.')), st_lim))
     _cop.append(Spacer(1, 0.3 * cm))
@@ -367,11 +372,23 @@ def generer(safe=False):
         _cop.append(Paragraph(escape(_t), st_lim))
     if INFOS.get('site web'):
         _cop.append(Spacer(1, 0.3 * cm)); _cop.append(Paragraph(escape(INFOS['site web']), st_lim))
+    _h_cop = sum(_f.wrap(_larg_utile, _haut_utile)[1] for _f in _cop)
+    lim.append(Spacer(1, max(0, _haut_utile - _h_cop)))
     lim += _cop
+    # Page 3 : dédicace – centrée au milieu de la page
     if INFOS.get('dédicace'):
-        lim += [PageBreak()] + [Paragraph(escape(x), st_ch2) for x in INFOS['dédicace'].splitlines() if x.strip()]
+        _ded = [Paragraph(escape(x), st_ch2) for x in INFOS['dédicace'].splitlines() if x.strip()]
+        _h_d = sum(_f.wrap(_larg_utile, _haut_utile)[1] for _f in _ded)
+        lim.append(PageBreak())
+        lim.append(Spacer(1, max(0, (_haut_utile - _h_d) / 2)))
+        lim += _ded
+    # Page 4 : épigraphe – centrée au milieu de la page
     if INFOS.get('épigraphe'):
-        lim += [PageBreak()] + [Paragraph(escape(x), st_ch2) for x in INFOS['épigraphe'].splitlines() if x.strip()]
+        _epi = [Paragraph(escape(x), st_ch2) for x in INFOS['épigraphe'].splitlines() if x.strip()]
+        _h_e = sum(_f.wrap(_larg_utile, _haut_utile)[1] for _f in _epi)
+        lim.append(PageBreak())
+        lim.append(Spacer(1, max(0, (_haut_utile - _h_e) / 2)))
+        lim += _epi
     segments.append({'type': 'lim', 'story': lim, 'entete': None})
 
     for b in ORG:

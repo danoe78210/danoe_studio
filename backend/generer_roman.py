@@ -1553,6 +1553,47 @@ def main():
             nom_fichier = enregistrer_docx_securise(doc, nom_fichier)
             pages_reelles = maj_champs_word(nom_fichier) or pages_reelles
         afficher_statistiques(pages_reelles, titre_aff)
+    # ── CORRECTIF registre : régénère registre.json pour l'interface ──
+    try:
+        import json as _json_reg
+        _r = lire_infos()
+        _inf = _r[0] if isinstance(_r, tuple) else _r
+        _sty = lire_style()
+        _org = lire_organisation()
+        _mots = _nchap = _nill = 0
+        for _b in (_org or []):
+            if str(_b.get('type', '')) == 'chapitre':
+                _nchap += 1
+                try:
+                    _txt = open(os.path.join(BASE, 'Chapitres', str(_b.get('fichier_source', '')) + '.md'), encoding='utf-8').read()
+                    _mots += len(_txt.split())
+                    _nill += _txt.count('![')
+                except Exception:
+                    pass
+            elif str(_b.get('type', '')) == 'image':
+                _nill += 1
+        _reg = {
+            'ouvrage': (_inf.get('titre complet du roman', '') or titre_aff),
+            'format': (_sty.get('format_livre') or _sty.get('format') or ''),
+            'mots': _mots,
+            'pages': int(pages_reelles or 0),
+            'chapitres': _nchap,
+            'illustrations': _nill,
+            'source': 'JSON',
+        }
+        for _chem_reg in (os.path.join(BASE, 'registre.json'),
+                          os.path.join(BASE, 'statistiques.json'),
+                          os.path.join(BASE, 'export', 'registre.json'),
+                          os.path.join(BASE, 'export', 'statistiques.json')):
+            try:
+                os.makedirs(os.path.dirname(_chem_reg), exist_ok=True)
+                with open(_chem_reg, 'w', encoding='utf-8') as _f:
+                    _json_reg.dump(_reg, _f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
 
 
 if __name__ == '__main__':
@@ -1570,3 +1611,28 @@ if __name__ == '__main__':
             main()
         finally:
             fermer_word()   # v2.9.5 : ferme l'instance Word unique
+# ── CORRECTIF registre v2 : clés/valeurs propres pour l'interface ──
+def _normaliser_registre():
+    import json as _j
+    for _p in (os.path.join(BASE, 'registre.json'), os.path.join(BASE, 'export', 'registre.json')):
+        try:
+            if not os.path.isfile(_p):
+                continue
+            _d = _j.load(open(_p, encoding='utf-8'))
+            _c = {str(k).strip(): (str(v).strip() if isinstance(v, str) else v) for k, v in _d.items()}
+            if not _c.get('mots'):
+                _tot = 0
+                _dch = os.path.join(BASE, 'Chapitres')
+                if os.path.isdir(_dch):
+                    for _f in os.listdir(_dch):
+                        if _f.lower().endswith('.md'):
+                            try:
+                                _tot += len(open(os.path.join(_dch, _f), encoding='utf-8').read().split())
+                            except Exception:
+                                pass
+                _c['mots'] = _tot
+            _j.dump(_c, open(_p, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+import atexit as _atx_reg
+_atx_reg.register(_normaliser_registre)

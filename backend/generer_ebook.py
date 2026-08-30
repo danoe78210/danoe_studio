@@ -146,16 +146,29 @@ em { font-style: italic; }
 # ─────────────────────────────────────────────
 # 2. CONFIGURATION / FICHIERS SOURCES
 # ─────────────────────────────────────────────
+def _lire_json_brut():
+    try:
+        import json
+        return json.load(open(os.path.join(BASE, 'Configuration_roman.json'), encoding='utf-8'))
+    except Exception:
+        return None
+
 def lire_infos():
     infos = {l: '' for l in CHAMPS_LABELS}
     source = 'défaut'
+    ji = (_lire_json_brut() or {}).get('informations', {}) or {}
+    for label in CHAMPS_LABELS:
+        for k, v in ji.items():
+            kl = str(k).strip().lower()
+            if v and any(kl.startswith(p) for p in CORRESPONDANCES[label]):
+                infos[label] = str(v).strip(); source = 'JSON'; break
     if JSON_OK:
         try:
             data = cs.charger_configuration()
             j = data.get('informations', {})
             for label, cle in JSON_INFOS_KEYS.items():
                 v = j.get(cle, '')
-                if v:
+                if v and not infos[label]:
                     infos[label] = str(v).strip()
             if any(infos.values()):
                 source = 'JSON'
@@ -183,7 +196,8 @@ def lire_infos():
 
 
 def trouver_docx():
-    cands = glob.glob(os.path.join(BASE, '*_KDP.docx'))
+    cands = (glob.glob(os.path.join(BASE, '*_KDP.docx'))
+             + glob.glob(os.path.join(BASE, 'export', '*_KDP.docx')))
     return max(cands, key=os.path.getmtime) if cands else None
 
 
@@ -648,7 +662,9 @@ def main(docx_override=None):
     slug_titre = re.sub(r'[^\w]+', '_', (infos[TITRE] or 'roman').strip())
     if infos[SOUS_TITRE]:
         slug_titre += '_' + re.sub(r'[^\w]+', '_', infos[SOUS_TITRE].strip())
-    sortie = os.path.join(BASE, f'{slug_titre}_ebook.epub')
+    dossier_sortie = os.path.join(BASE, 'export')
+    os.makedirs(dossier_sortie, exist_ok=True)
+    sortie = os.path.join(dossier_sortie, f'{slug_titre}_ebook.epub')
 
     print('   📖 Construction de l\'EPUB…')
     try:
