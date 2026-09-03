@@ -128,6 +128,9 @@ p.sep { text-align: center; margin: 1em 0; text-indent: 0; font-size: 1.1em; let
 .dedication, .epigraph { text-align: center; font-style: italic; page-break-after: always; margin: 4em 2em; line-height: 1.6; }
 .dedication p, .epigraph p { text-indent: 0; margin: 0.5em 0; }
 img { max-width: 90%; display: block; margin: 1em auto; }
+.publisher { margin-top: 2.5em; font-size: 1.05em; letter-spacing: 0.08em; }
+.preface, .postface, .remerciements, .autres-livres { page-break-before: always; }
+.autres-livres ul { list-style: none; padding: 0; } .autres-livres li { margin: 0.4em 0; text-indent: 0; }
 .planche { text-align: center; page-break-before: always; }
 .planche p { text-indent: 0; }
 .fig { text-align: center; font-size: 0.85em; font-style: italic; margin: 0.3em 0 1em; text-indent: 0; }
@@ -149,14 +152,35 @@ em { font-style: italic; }
 def _lire_json_brut():
     try:
         import json
-        return json.load(open(os.path.join(BASE, 'Configuration_roman.json'), encoding='utf-8'))
+        return _normaliser_cles(json.load(open(os.path.join(BASE, 'Configuration_roman.json'), encoding='utf-8')))
     except Exception:
         return None
+
+def _get_infos(d):
+    d = d or {}
+    if 'informations' in d: return d['informations'] or {}
+    if 'informations ' in d: return d['informations '] or {}
+    for k, v in d.items():
+        if str(k).strip() == 'informations' and isinstance(v, dict): return v
+    return {}
+
+
+def _get_section(d, nom, defaut=None):
+    """Recherche tolérante d'une section JSON (clés avec espaces finaux)."""
+    if defaut is None: defaut = {}
+    if not isinstance(d, dict): return defaut
+    if nom in d and d[nom] is not None: return d[nom]
+    for k, v in d.items():
+        if str(k).strip() == nom and v is not None: return v
+    return defaut
+
+def _section_infos(d):
+    return _get_section(d, 'informations', {}) or {}
 
 def lire_infos():
     infos = {l: '' for l in CHAMPS_LABELS}
     source = 'défaut'
-    ji = (_lire_json_brut() or {}).get('informations', {}) or {}
+    ji = _get_infos(_lire_json_brut())
     for label in CHAMPS_LABELS:
         for k, v in ji.items():
             kl = str(k).strip().lower()
@@ -165,7 +189,7 @@ def lire_infos():
     if JSON_OK:
         try:
             data = cs.charger_configuration()
-            j = data.get('informations', {})
+            j = _infos_de(data)
             for label, cle in JSON_INFOS_KEYS.items():
                 v = j.get(cle, '')
                 if v and not infos[label]:
@@ -194,6 +218,42 @@ def lire_infos():
     infos['_source'] = source
     return infos
 
+
+
+def lire_annexes():
+    """Lit les champs annexes du menu Informations (clés FR ou snake)."""
+    ax = {'sommaire': True}
+    j = {}
+    try:
+        import json
+        p = os.path.join(BASE, 'Configuration_roman.json')
+        if os.path.isfile(p):
+            j = _infos_de(json.load(open(p, encoding='utf-8')))
+    except Exception:
+        j = {}
+    def g(*cles):
+        for c in cles:
+            v = j.get(c)
+            if v: return str(v).strip()
+        return ''
+    ax['editeur'] = g('editeur', 'Éditeur', 'Editeur', 'maison_edition')
+    ax['autres_livres'] = g('autres_livres', 'Autres livres du même auteur')
+    ax['remerciements'] = g('remerciements', 'Remerciements')
+    ax['frontispice'] = g('frontispice', 'Frontispice')
+    ax['preface'] = g('preface', 'Préface')
+    ax['postface'] = g('postface', 'Postface')
+    sv = j.get('sommaire')
+    ax['sommaire'] = sv if isinstance(sv, bool) else (str(sv).strip().lower() != 'false' if sv is not None else True)
+    return ax
+
+def _md_to_html(txt):
+    out = []
+    for ln in txt.split('\n'):
+        ln = ln.rstrip()
+        if not ln.strip() or ln.startswith('# '): continue
+        if ln.startswith('## '): out.append('<h2>%s</h2>' % ln[3:].strip())
+        else: out.append('<p>%s</p>' % ln)
+    return ''.join(out)
 
 def trouver_docx():
     cands = (glob.glob(os.path.join(BASE, '*_KDP.docx'))
@@ -381,38 +441,95 @@ def construire_ebook(docx_path, infos, images, sortie):
     cover_data, cover_orig = couverture_octets()
     if cover_data:
         add('cover-image', 'cover.jpg', 'image/jpeg', cover_data, 'cover-image')
+    _ax0 = lire_annexes()
+    if _ax0.get('frontispice'):
+        _fp = os.path.join(DOSSIER_IMAGES, _ax0['frontispice'])
+        if not os.path.isfile(_fp):
+            for _ext in ('.png', '.jpg', '.jpeg', '.webp', '.bmp'):
+                if os.path.isfile(_fp + _ext): _fp += _ext; break
+        if os.path.isfile(_fp) and PILImage is not None:
+            try:
+                with PILImage.open(_fp) as im:
+                    _buf = io.BytesIO(); im.convert('RGB').save(_buf, 'JPEG', quality=88)
+                add('frontispice-img', 'images/frontispice.jpg', 'image/jpeg', _buf.getvalue())
+                add_page('frontispice', 'frontispice.xhtml', 'Frontispice',
+                         '<div class="planche"><p><img src="images/frontispice.jpg" alt="frontispice"/></p></div>')
+            except Exception: pass
 
-    # ── Pages liminaires ──
-    corps = ('<div class="title-page"><h1>' + html_escape(titre.upper()) + '</h1>')
+    # ── Pages liminaires (structure éditoriale française) ──
+    
+    # 1. Page de garde (blanche)
+    add_page('garde', 'garde.xhtml', 'Page de garde', '<div class="page-garde"></div>')
+    
+    # 2. Faux-titre
+    corps_faux_titre = f'<div class="faux-titre"><h1>{html_escape(titre)}</h1></div>'
+    add_page('faux-titre', 'faux-titre.xhtml', 'Faux-titre', corps_faux_titre)
+    
+    # 3. Frontispice
+    frontispice = infos.get('frontispice') or infos.get('Frontispice')
+    if frontispice:
+        img_path = os.path.join(DOSSIER_IMAGES, frontispice)
+        if os.path.exists(img_path):
+            # Copier l'image dans l'EPUB
+            img_data = open(img_path, 'rb').read()
+            img_id = f'frontispice-{int(time.time())}'
+            add(img_id, f'images/{frontispice}', 'image/jpeg' if frontispice.lower().endswith(('.jpg', '.jpeg')) else 'image/png', img_data)
+            corps_frontispice = f'<div class="frontispice"><img src="images/{frontispice}" alt="Frontispice"/></div>'
+            add_page('frontispice', 'frontispice.xhtml', 'Frontispice', corps_frontispice)
+    
+    # 4. Page de titre
+    corps_titre = '<div class="title-page"><h1>' + html_escape(titre.upper()) + '</h1>'
     if sous_titre:
-        corps += f'<p class="subtitle">{html_escape(sous_titre)}</p>'
-    corps += f'<p class="author">{html_escape(auteur)}</p></div>'
-    add_page('title', 'title.xhtml', titre, corps, 'Page de titre')
-
+        corps_titre += f'<p class="subtitle">{html_escape(sous_titre)}</p>'
+    corps_titre += f'<p class="author">{html_escape(auteur)}</p>'
+    if infos[EDITEUR]:
+        corps_titre += f'<p class="publisher">{html_escape(infos[EDITEUR])}</p>'
+    corps_titre += '</div>'
+    add_page('title', 'title.xhtml', titre, corps_titre, 'Page de titre')
+    
+    # 5. Copyright
     copyright_txt = infos[COPYRIGHT] or f'© {annee} {auteur}. Tous droits réservés.'
     lignes = [titre_complet, '', copyright_txt]
     if infos[ISBN]:
         lignes.append('ISBN : ' + infos[ISBN])
+    lignes.append(f'Dépôt légal : {annee}')
     if infos[SITE]:
         lignes += ['', infos[SITE]]
-    lignes += ['', 'Toute reproduction, même partielle, est interdite sans '
-                   'l’autorisation préalable de l’auteur.']
-    # &#160; (référence numérique) au lieu de &nbsp; (interdit en XML)
+    lignes += ['', "Toute reproduction, même partielle, est interdite sans l'autorisation préalable de l'auteur."]
     corps = '<div class="copyright">' + ''.join(
         f'<p style="text-indent:0">{html_escape(l) if l else "&#160;"}</p>'
         for l in lignes) + '</div>'
     add_page('copyright', 'copyright.xhtml', 'Mentions légales', corps)
-
+    
+    # 6. Dédicace
     if infos[DEDICACE]:
         corps = '<div class="dedication">' + ''.join(
             f'<p>{html_escape(l)}</p>' for l in infos[DEDICACE].splitlines() if l.strip()) + '</div>'
         add_page('dedicace', 'dedicace.xhtml', 'Dédicace', corps, 'Dédicace')
-
+    
+    # 7. Épigraphe
     if infos[EPIGRAPHE]:
         corps = '<div class="epigraph">' + ''.join(
             f'<p>{html_escape(l)}</p>' for l in infos[EPIGRAPHE].splitlines() if l.strip()) + '</div>'
-    add_page('epigraphe', 'epigraphe.xhtml', 'Épigraphe', corps, 'Épigraphe')
-
+        add_page('epigraphe', 'epigraphe.xhtml', 'Épigraphe', corps, 'Épigraphe')
+    
+    # 8. Table des matières
+    corps = '<div class="toc-page"><h1>Table des matières</h1><ul>'
+    for iid, lib in toc:
+        href = next(i['href'] for i in items if i['id'] == iid)
+        corps += f'<li><a href="{href}">{html_escape(lib)}</a></li>'
+    corps += '</ul></div>'
+    add_page('tdm', 'tdm.xhtml', 'Table des matières', corps, 'Table des matières')
+    
+    # 9. Préface
+    preface = infos.get('preface') or infos.get('Préface')
+    if preface:
+        preface_path = os.path.join(DOSSIER_CHAPITRES, f"{preface}.md")
+        if os.path.exists(preface_path):
+            contenu_preface = lire_fichier_markdown(preface_path)
+            corps_preface = '<div class="preface"><h1>Préface</h1>' + convertir_markdown_html(contenu_preface) + '</div>'
+            add_page('preface', 'preface.xhtml', 'Préface', corps_preface, 'Préface')
+    
     # ── Parcours du manuscrit ──
     print('   📖 Parcours du manuscrit…')
     nb_actes = nb_chapitres = nb_images = 0
@@ -483,14 +600,40 @@ def construire_ebook(docx_path, infos, images, sortie):
 
     flush_chapitre()
 
-    # ── Page TDM HTML visible (fin de volume, comme le papier) ──
-    corps = '<div class="toc-page"><h1>Table des matières</h1><ul>'
-    for iid, lib in toc:
-        href = next(i['href'] for i in items if i['id'] == iid)
-        corps += f'<li><a href="{href}">{html_escape(lib)}</a></li>'
-    corps += '</ul></div>'
-    add_page('tdm', 'tdm.xhtml', 'Table des matières', corps, 'Table des matières')
-
+    # ── Pages finales ──
+    
+    # 10. Postface
+    postface = infos.get('postface') or infos.get('Postface')
+    if postface:
+        postface_path = os.path.join(DOSSIER_CHAPITRES, f"{postface}.md")
+        if os.path.exists(postface_path):
+            contenu_postface = lire_fichier_markdown(postface_path)
+            corps_postface = '<div class="postface"><h1>Postface</h1>' + convertir_markdown_html(contenu_postface) + '</div>'
+            add_page('postface', 'postface.xhtml', 'Postface', corps_postface, 'Postface')
+    
+    # 11. Remerciements
+    remerciements = infos.get('remerciements') or infos.get('Remerciements')
+    if remerciements:
+        corps_remerciements = '<div class="remerciements"><h1>Remerciements</h1>' + ''.join(
+            f'<p>{html_escape(l)}</p>' for l in remerciements.splitlines() if l.strip()) + '</div>'
+        add_page('remerciements', 'remerciements.xhtml', 'Remerciements', corps_remerciements, 'Remerciements')
+    
+    # ── Page TDM HTML visible (si option Sommaire cochée) ──
+    if _ax0.get('sommaire', True):
+        corps = '<div class="toc-page"><h1>Table des matières</h1><ul>'
+        for iid, lib in toc:
+            href = next(i['href'] for i in items if i['id'] == iid)
+            corps += f'<li><a href="{href}">{html_escape(lib)}</a></li>'
+        corps += '</ul></div>'
+        add_page('tdm', 'tdm.xhtml', 'Table des matières', corps, 'Table des matières')
+        # Réordonnancement de l'ordre de lecture : épigraphe -> TDM -> préface
+        if 'tdm' in spine:
+            spine.remove('tdm')
+            if 'preface' in spine:
+                spine.insert(spine.index('preface'), 'tdm')
+            elif 'epigraphe' in spine:
+                spine.insert(spine.index('epigraphe') + 1, 'tdm')
+    
     # ── nav.xhtml (EPUB 3) ──
     nav = ('<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n'
            '<html xmlns="http://www.w3.org/1999/xhtml" '
@@ -702,3 +845,15 @@ if __name__ == '__main__':
         EBOOK_CODE = 0
     else:
         EBOOK_CODE = main()
+def _normaliser_cles(d):
+    """Recadre les clés (espaces finaux du JSON du menu Informations)."""
+    if not isinstance(d, dict):
+        return d
+    return {str(k).strip(): (_normaliser_cles(v) if isinstance(v, dict) else v)
+            for k, v in d.items()}
+
+def _infos_de(d):
+    """Retourne le sous-dictionnaire 'informations' normalisé (tolérant)."""
+    d = _normaliser_cles(d or {})
+    v = d.get('informations')
+    return v if isinstance(v, dict) else {}

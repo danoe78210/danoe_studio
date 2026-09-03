@@ -1,0 +1,80 @@
+{
+  "version": "1.0",
+  "structure": [
+    {
+      "id": "garde",
+      "type": "vide",
+      "saut": "next"
+    },
+    {
+      "id": "faux_titre",
+      "type": "faux_titre",
+      "saut": "impair"
+    },
+    {
+      "id": "frontispice",
+      "type": "image",
+      "saut": "impair",
+      "optionnel": true,
+      "source": "champ:frontispice"
+    },
+    {
+      "id": "page_titre",
+      "type": "titre",
+      "saut": "impair"
+    },
+    {
+      "id": "copyright",
+      "type": "copyright",
+      "saut": "next"
+    },
+    {
+      "id": "dedicace",
+      "type": "dedicace",
+      "saut": "impair",
+      "optionnel": true
+    },
+    {
+      "id": "epigraphe",
+      "type": "epigraphe",
+      "saut": "impair",
+      "optionnel": true
+    },
+    {
+      "id": "sommaire",
+      "type": "sommaire",
+      "saut": "impair",
+      "optionnel": true,
+      "source": "champ:sommaire"
+    },
+    {
+      "id": "preface",
+      "type": "chapitre_md",
+      "saut": "impair",
+      "optionnel": true,
+      "source": "champ:preface",
+      "titre": "Préface"
+    },
+    {
+      "id": "manuscrit",
+      "type": "manuscrit",
+      "saut": "impair"
+    },
+    {
+      "id": "postface",
+      "type": "chapitre_md",
+      "saut": "impair",
+      "optionnel": true,
+      "source": "champ:postface",
+      "titre": "Postface"
+    },
+    {
+      "id": "remerciements",
+      "type": "texte",
+      "saut": "impair",
+      "optionnel": true,
+      "source": "champ:remerciements",
+      "titre": "Remerciements"
+    }
+  ]
+}

@@ -44,7 +44,7 @@ def nettoyer(v): return str(v).strip().strip('`').strip('*').strip() if v is not
 def _lire_json():
     try:
         with open(CHEMIN_CONFIG_JSON, encoding='utf-8') as f:
-            return json.load(f)
+            return _normaliser_cles(json.load(f))
     except Exception:
         return None
 
@@ -54,7 +54,7 @@ def lire_style():
          'police_titres': 'Cinzel', 'taille_acte': 16.0, 'taille_chap1': 14.0,
          'taille_chap2': 13.0, 'taille_sous': 12.0, 'interligne': 1.0}
     j = _lire_json()
-    st = (j or {}).get('style', {}) or {}
+    st = _get_section(j or {}, 'style', {}) or {}
     if st:
         s['format'] = str(st.get('format_livre') or s['format'])
         s['police_corps'] = str(st.get('police_corps') or s['police_corps'])
@@ -91,25 +91,90 @@ def lire_style():
     s['largeur_po'], s['hauteur_po'] = s['largeur_cm'] / 2.54, s['hauteur_cm'] / 2.54
     return s
 
+def _get_infos(d):
+    d = d or {}
+    if 'informations' in d: return d['informations'] or {}
+    if 'informations ' in d: return d['informations '] or {}
+    for k, v in d.items():
+        if str(k).strip() == 'informations' and isinstance(v, dict): return v
+    return {}
+
+
+def _get_section(d, nom, defaut=None):
+    """Recherche tolérante d'une section JSON (clés avec espaces finaux)."""
+    if defaut is None: defaut = {}
+    if not isinstance(d, dict): return defaut
+    if nom in d and d[nom] is not None: return d[nom]
+    for k, v in d.items():
+        if str(k).strip() == nom and v is not None: return v
+    return defaut
+
+def _section_infos(d):
+    return _get_section(d, 'informations', {}) or {}
+
 def lire_infos():
+    def _norm(d):
+        if not isinstance(d, dict):
+            return d
+        return {str(k).strip(): (_norm(v) if isinstance(v, dict) else v)
+                for k, v in d.items()}
     infos = {}
-    j = _lire_json()
-    for cle, val in ((j or {}).get('informations', {}) or {}).items():
-        if val: infos[cle.lower()] = nettoyer(val)
+    j = _norm(_lire_json() or {})
+    ji = j.get('informations')
+    ji = ji if isinstance(ji, dict) else {}
+    for cle, val in ji.items():
+        if val:
+            infos[cle.lower()] = nettoyer(val)
     if not infos:
         try:
             from openpyxl import load_workbook
             wb = load_workbook(CHEMIN_CONFIG, data_only=True)
             ws = wb['Informations']
             for row in ws.iter_rows(values_only=True):
-                if row and row[0]: infos[nettoyer(row[0]).lower()] = nettoyer(row[1])
+                if row and row[0]:
+                    infos[nettoyer(row[0]).lower()] = nettoyer(row[1])
         except Exception:
             pass
     return infos
 
+def lire_annexes():
+    def _norm(d):
+        if not isinstance(d, dict):
+            return d
+        return {str(k).strip(): (_norm(v) if isinstance(v, dict) else v)
+                for k, v in d.items()}
+    ax = {'sommaire': True}
+    j = _norm(_lire_json() or {})
+    ji = j.get('informations')
+    ji = ji if isinstance(ji, dict) else {}
+    def g(*cles):
+        for c in cles:
+            v = ji.get(c)
+            if v:
+                return str(v).strip()
+        return ''
+    ax['editeur'] = g('editeur', 'Éditeur', 'Editeur', 'maison_edition')
+    ax['autres_livres'] = g('autres_livres', 'Autres livres du même auteur')
+    ax['remerciements'] = g('remerciements', 'Remerciements')
+    ax['frontispice'] = g('frontispice', 'Frontispice')
+    ax['preface'] = g('preface', 'Préface')
+    ax['postface'] = g('postface', 'Postface')
+    sv = ji.get('sommaire')
+    ax['sommaire'] = sv if isinstance(sv, bool) else (str(sv).strip().lower() != 'false' if sv is not None else True)
+    return ax
+
+def _md_to_html(txt):
+    out = []
+    for ln in txt.split('\n'):
+        ln = ln.rstrip()
+        if not ln.strip() or ln.startswith('# '): continue
+        if ln.startswith('## '): out.append('<h2>%s</h2>' % ln[3:].strip())
+        else: out.append('<p>%s</p>' % ln)
+    return ''.join(out)
+
 def lire_organisation():
     j = _lire_json()
-    chap = (j or {}).get('chapitres', []) or []
+    chap = _get_section(j or {}, 'chapitres', []) or []
     if chap:
         flux = []
         for it in chap:
@@ -123,6 +188,8 @@ def lire_organisation():
                 flux.append({'type': 'chapitre', 'fichier': it['fichier_source'],
                              'titre': (l1 + ' ' + l2).strip() if l2 else l1})
         if flux: return flux
+    if not os.path.isfile(CHEMIN_CONFIG):
+        return []
     from openpyxl import load_workbook
     wb = load_workbook(CHEMIN_CONFIG, data_only=True)
     ws = wb['Chapitres']
@@ -343,53 +410,86 @@ def generer(safe=False):
     print(f'   📏 Marges KDP : gouttière {gut:.3f} po · extérieure {out:.3f} po (~{int(pages_est)} pages)'
           + ('  [mode sécurisé]' if safe else ''))
 
+
     # ── construction des segments ──
     segments = []
+    _ax = lire_annexes()
     _tit = INFOS.get('titre complet du roman', '') or 'Titre'
+    _sous = INFOS.get('sous-titre éventuel', '') or ''
     _aut = INFOS.get("nom de l'auteur (couverture)", '') or 'Auteur'
     _ann = INFOS.get('année de publication', '2026')
-    lim = [Paragraph(escape(_tit.upper()), st_acte),
-    Paragraph(escape(INFOS.get('sous-titre éventuel', '') or ''), st_ch2),
-    Spacer(1, 2 * cm), Paragraph(escape(_aut), st_ch2), PageBreak()]
     _larg_utile = STYLE['largeur_cm'] * cm - 4 * cm
     _haut_utile = H - 3.8 * cm
-    # Page 2 : copyright – texte en BAS de page
-    _cop = []
-    _cop.append(Paragraph(escape((_tit + ' – ' + INFOS['sous-titre éventuel']) if INFOS.get('sous-titre éventuel') else _tit), st_lim))
+    lim = []
+    # 1. Page de garde (blanche)
+    lim += [Spacer(1, 1 * cm), PageBreak()]
+    # 2. Faux-titre (titre seul, petits caractères)
+    lim += [Spacer(1, 7 * cm), Paragraph(escape(_tit), st_lim), PageBreak()]
+    # 3. Frontispice (image)
+    if _ax.get('frontispice'):
+        _fp = os.path.join(BASE, 'Images', _ax['frontispice'])
+        if not os.path.isfile(_fp):
+            for _ext in ('.png', '.jpg', '.jpeg', '.webp', '.bmp'):
+                if os.path.isfile(_fp + _ext): _fp += _ext; break
+        if os.path.isfile(_fp):
+            try:
+                _img = RLImage(_fp, width=12 * cm, height=16 * cm); _img.hAlign = 'CENTER'
+                lim += [Spacer(1, 2 * cm), _img]
+            except Exception: pass
+        lim.append(PageBreak())
+    # 4. Page de titre (titre, sous-titre, auteur, éditeur)
+    lim.append(Paragraph(escape(_tit.upper()), st_acte))
+    if _sous: lim.append(Paragraph(escape(_sous), st_ch2))
+    lim += [Spacer(1, 2 * cm), Paragraph(escape(_aut), st_ch2)]
+    if _ax.get('editeur'):
+        lim += [Spacer(1, 1 * cm), Paragraph(escape(_ax['editeur']), st_lim)]
+    lim.append(PageBreak())
+    # 5. Copyright (verso : mentions, ISBN, dépôt légal, édition)
+    _cop = [Paragraph(escape((_tit + ' – ' + _sous) if _sous else _tit), st_lim)]
     _cop.append(Spacer(1, 0.6 * cm))
     _cop.append(Paragraph(escape(INFOS.get('mention de copyright', '') or ('© ' + _ann + ' ' + _aut + '. Tous droits réservés.')), st_lim))
     _cop.append(Spacer(1, 0.3 * cm))
     _meta = ' – '.join(x for x in [INFOS.get('édition', ''), _ann] if x)
     if _meta: _cop.append(Paragraph(escape(_meta), st_lim))
     if INFOS.get('isbn'): _cop.append(Paragraph('ISBN : ' + escape(INFOS['isbn']), st_lim))
-    if INFOS.get('dépôt légal'): _cop.append(Paragraph('Dépôt légal : ' + escape(INFOS['dépôt légal']), st_lim))
-    if INFOS.get("maison d'édition"):
-        _cop.append(Spacer(1, 0.3 * cm)); _cop.append(Paragraph(escape(INFOS["maison d'édition"]), st_lim))
+    _cop.append(Paragraph('Dépôt légal : ' + _ann, st_lim))
+    if _ax.get('editeur'): _cop.append(Paragraph(escape(_ax['editeur']), st_lim))
     _cop.append(Spacer(1, 0.6 * cm))
     for _t in ['Toute reproduction, même partielle, est interdite sans l’autorisation',
-    'préalable de l’auteur, conformément aux dispositions de la législation',
-    'en vigueur sur la propriété intellectuelle.']:
+               'préalable de l’auteur, conformément aux dispositions de la législation',
+               'en vigueur sur la propriété intellectuelle.']:
         _cop.append(Paragraph(escape(_t), st_lim))
     if INFOS.get('site web'):
-        _cop.append(Spacer(1, 0.3 * cm)); _cop.append(Paragraph(escape(INFOS['site web']), st_lim))
+        _cop += [Spacer(1, 0.3 * cm), Paragraph(escape(INFOS['site web']), st_lim)]
     _h_cop = sum(_f.wrap(_larg_utile, _haut_utile)[1] for _f in _cop)
     lim.append(Spacer(1, max(0, _haut_utile - _h_cop)))
     lim += _cop
-    # Page 3 : dédicace – centrée au milieu de la page
+    lim.append(PageBreak())
+    # 6. Dédicace (page impaire dédiée)
     if INFOS.get('dédicace'):
         _ded = [Paragraph(escape(x), st_ch2) for x in INFOS['dédicace'].splitlines() if x.strip()]
         _h_d = sum(_f.wrap(_larg_utile, _haut_utile)[1] for _f in _ded)
-        lim.append(PageBreak())
         lim.append(Spacer(1, max(0, (_haut_utile - _h_d) / 2)))
         lim += _ded
-    # Page 4 : épigraphe – centrée au milieu de la page
+        lim.append(PageBreak())
+    # 7. Épigraphe
     if INFOS.get('épigraphe'):
         _epi = [Paragraph(escape(x), st_ch2) for x in INFOS['épigraphe'].splitlines() if x.strip()]
         _h_e = sum(_f.wrap(_larg_utile, _haut_utile)[1] for _f in _epi)
-        lim.append(PageBreak())
         lim.append(Spacer(1, max(0, (_haut_utile - _h_e) / 2)))
         lim += _epi
+        lim.append(PageBreak())
     segments.append({'type': 'lim', 'story': lim, 'entete': None})
+    # 8. Préface (segment séparé ; la TDM sera insérée juste avant)
+    if _ax.get('preface'):
+        _pc = os.path.join(BASE, 'Chapitres', _ax['preface'] + '.md')
+        if os.path.isfile(_pc):
+            _st = [Paragraph('Préface', st_acte)]
+            for _ln in open(_pc, encoding='utf-8').read().split('\n'):
+                _ln = _ln.strip()
+                if _ln and not _ln.startswith('# '): _st.append(Paragraph(escape(_ln), st_lim))
+            segments.append({'type': 'preface', 'story': _st, 'entete': None})
+
 
     for b in ORG:
         if b['type'] == 'image':
@@ -437,7 +537,7 @@ def generer(safe=False):
                     premier = False
             segments.append({'type': 'chapitre', 'titre': b['titre'], 'entete': b['titre'], 'story': st})
 
-    # ── UNE SEULE passe de rendu + fusion (offset connu en avançant) ──
+        # ── UNE SEULE passe de rendu + fusion (offset connu en avançant) ──
     writer = PdfWriter()
     running = 1
     debut_num = None
@@ -452,9 +552,9 @@ def generer(safe=False):
         params = {'F': F, 'entete': s['entete'], 'debut_num': debut_num or 10 ** 9, 'pad': PAD}
         buf = rendre(s['story'], W, H, MARGES, params, running - 1)
         pages = PdfReader(buf)
-        for p in pages.pages: writer.add_page(p)
+        for p in pages.pages:
+            writer.add_page(p)
         running += len(pages.pages)
-
     # ── TDM en fin de volume ──
     if running % 2 == 0:
         writer.add_blank_page(width=W, height=H); running += 1
@@ -463,13 +563,15 @@ def generer(safe=False):
         pts = max(3, 70 - len(t))
         toc.append(Paragraph(f'{escape(t)} {"." * pts} {p if p < (debut_num or 1) else p - (debut_num or 1) + 1}', st_toc))
     buf = rendre(toc, W, H, MARGES, {'F': F, 'entete': None, 'debut_num': 10 ** 9, 'pad': PAD}, running - 1)
-    for p in PdfReader(buf).pages: writer.add_page(p)
-
+    for p in PdfReader(buf).pages:
+        writer.add_page(p)
     titre = INFOS.get('titre complet du roman', '') or 'Roman'
     writer.add_metadata({'/Title': titre, '/Author': INFOS.get("nom de l'auteur (couverture)", ''),
                          '/Creator': 'generer_pdf_direct v3.0'})
-    nom = os.path.join(BASE, slug(titre) + '_KDP.pdf')
-    with open(nom, 'wb') as f: writer.write(f)
+    _doss = os.path.join(BASE, 'export'); os.makedirs(_doss, exist_ok=True)
+    nom = os.path.join(_doss, slug(titre) + '_KDP.pdf')
+    with open(nom, 'wb') as f:
+        writer.write(f)
     mb = PdfReader(nom).pages[0].mediabox
     ok = abs(float(mb.width) - W) <= 2 and abs(float(mb.height) - H) <= 2
     print(f'   {"✅" if ok else "⚠️"} MediaBox : {float(mb.width):.0f} x {float(mb.height):.0f} pt '
@@ -497,7 +599,7 @@ def generer_depuis_word():
         except Exception: time.sleep(0.3)
     print('   🖨 Conversion Word→PDF (vos modifs incluses)…')
     try:
-        r = subprocess.run([sys.executable, os.path.abspath(__file__), '--convert', dx, pf], timeout=180, capture_output=True, text=True)
+        r = subprocess.run([sys.executable, os.path.abspath(__file__), '--convert', dx, pf], timeout=300, capture_output=True, text=True)
         if r.returncode == 0 and os.path.isfile(pf):
             print('✅ PDF KDP prêt (converti depuis Word) : ' + pf); return True
         return False
@@ -520,3 +622,15 @@ if __name__ == '__main__':
         _convert_word_pdf(sys.argv[_i + 1], sys.argv[_i + 2])
     else:
         main()
+def _normaliser_cles(d):
+    """Recadre les clés (espaces finaux du JSON du menu Informations)."""
+    if not isinstance(d, dict):
+        return d
+    return {str(k).strip(): (_normaliser_cles(v) if isinstance(v, dict) else v)
+            for k, v in d.items()}
+
+def _infos_de(d):
+    """Retourne le sous-dictionnaire 'informations' normalisé (tolérant)."""
+    d = _normaliser_cles(d or {})
+    v = d.get('informations')
+    return v if isinstance(v, dict) else {}

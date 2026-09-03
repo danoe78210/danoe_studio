@@ -110,6 +110,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String _tacheCourante = '';
   String? _chapitre;
   List<String> _chapitres = [];
+  List<String> _images = [];
   List<Map<String, dynamic>> _organisation = [];
   double _progressTarget = 0;
   String _phase = '';
@@ -125,13 +126,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
 
   // ══ INFOS DU LIVRE ══
-  final TextEditingController _iTitre = TextEditingController();
+    final TextEditingController _iEditeur = TextEditingController();
+  final TextEditingController _iAutresLivres = TextEditingController();
+  int _infosPage = 1;
+  bool _iSommaire = true;
+final TextEditingController _iTitre = TextEditingController();
   final TextEditingController _iSousTitre = TextEditingController();
   final TextEditingController _iAuteur = TextEditingController();
   final TextEditingController _iAnnee = TextEditingController();
   final TextEditingController _iIsbn = TextEditingController();
   final TextEditingController _iDedicace = TextEditingController();
   final TextEditingController _iEpigraphe = TextEditingController();
+  final TextEditingController _iRemerciements = TextEditingController();
+  String? _iFrontispice;
+  String? _iPreface;
+  String? _iPostface;
 
 
 
@@ -189,6 +198,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _chargerConfigSync();
     _assurerExport();
     _chargerChapitres();
+    _chargerImages();
     _chargerOrganisation();
     _chargerInfos();
     _log('✅ Danoë Studio prêt.', kind: LogKind.ok);
@@ -294,17 +304,48 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
-  void _chargerChapitres() {
+    void _chargerChapitres() {
     final dir = Directory('$_scriptsDir\\Chapitres');
     if (dir.existsSync()) {
+      final liste = <String>[];
+      for (final f in dir.listSync().whereType<File>()) {
+        final nom = f.uri.pathSegments.last;
+        if (nom.toLowerCase().endsWith('.md')) {
+          liste.add(nom.substring(0, nom.length - 3));
+        }
+      }
+      liste.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
       setState(() {
-        _chapitres = dir.listSync().whereType<File>()
-            .map((f) => f.uri.pathSegments.last)
-            .where((n) => n.endsWith('.md')).toList()..sort();
-        if (_chapitres.isNotEmpty) _chapitre = _chapitres.first;
+        _chapitres = liste;
+        if (_chapitre != null && !_chapitres.contains(_chapitre)) {
+          _chapitre = _chapitres.isNotEmpty ? _chapitres.first : null;
+        } else if (_chapitre == null && _chapitres.isNotEmpty) {
+          _chapitre = _chapitres.first;
+        }
       });
     }
   }
+
+  void _chargerImages() {
+    final dir = Directory('$_scriptsDir\\Images');
+    if (dir.existsSync()) {
+      final liste = <String>[];
+      for (final f in dir.listSync().whereType<File>()) {
+        final nom = f.uri.pathSegments.last;
+        final ext = nom.toLowerCase();
+        if (ext.endsWith('.png') || ext.endsWith('.jpg') ||
+            ext.endsWith('.jpeg') || ext.endsWith('.webp') ||
+            ext.endsWith('.bmp')) {
+          final idx = nom.lastIndexOf('.');
+          liste.add(idx > 0 ? nom.substring(0, idx) : nom);
+        }
+      }
+      liste.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      setState(() { _images = liste; });
+    }
+  }
+
+
 
   void _chargerInfos() {
     try {
@@ -316,6 +357,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       _iTitre.text = g('titre complet du roman');
       _iSousTitre.text = g('sous-titre éventuel');
       _iAuteur.text = g("nom de l'auteur (couverture)");
+      _iEditeur.text = (inf['editeur'] ?? inf['Éditeur'] ?? inf['Editeur'] ?? '').toString();
+      _iAutresLivres.text = (inf['autres_livres'] ?? inf['Autres livres du même auteur'] ?? '').toString();
+_iRemerciements.text = (inf['remerciements'] ?? '').toString();
+var _fr = (inf['frontispice'] ?? '').toString(); _iFrontispice = _fr.isEmpty ? null : _fr;
+var _pf = (inf['preface'] ?? '').toString(); _iPreface = _pf.isEmpty ? null : _pf;
+var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : _po;
+      final _sv = inf['sommaire'];
+      _iSommaire = _sv is bool ? _sv : (_sv == null ? true : _sv.toString().toLowerCase() != 'false');
       _iAnnee.text = g('année de publication');
       _iIsbn.text = g('isbn');
       _iDedicace.text = g('dédicace');
@@ -337,6 +386,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         "nom de l'auteur (couverture)": _iAuteur.text.trim(),
         'année de publication': _iAnnee.text.trim(),
         'isbn': _iIsbn.text.trim(),
+        'editeur': _iEditeur.text,
+        'Éditeur': _iEditeur.text,
+        'autres_livres': _iAutresLivres.text,
+'remerciements': _iRemerciements.text,
+'frontispice': _iFrontispice ?? '',
+'preface': _iPreface ?? '',
+'postface': _iPostface ?? '',
+        'Autres livres du même auteur': _iAutresLivres.text,
+        'sommaire': _iSommaire,
         'dédicace': _iDedicace.text,
         'épigraphe': _iEpigraphe.text,
       };
@@ -428,42 +486,55 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _log('➕ Acte ajouté : $nom', kind: LogKind.ok);
   }
 
-  Future<void> _ajouterChapitre() async {
-    final nom = await _saisirTexte('Nouveau chapitre', 'Titre du chapitre');
-    if (nom == null || nom.trim().isEmpty) return;
-    int maxN = 0;
-    for (final e in _organisation) {
-      if (e['type'] == 'chapitre') {
-        final m = RegExp(r'(\d+)\.').firstMatch((e['fichier_source'] ?? '').toString());
-        if (m != null) { final v = int.parse(m.group(1)!); if (v > maxN) maxN = v; }
-      }
-    }
-    final pref = '${maxN + 1}.1';
-    try {
-      final f = File('$_scriptsDir\\Chapitres\\$pref.md');
-      if (!f.existsSync()) f.writeAsStringSync('# $nom\n\n');
-    } catch (_) {}
-    setState(() => _organisation.add({'type': 'chapitre', 'fichier_source': pref, 'chapitre_ligne1': nom.trim(), 'titre': nom.trim()}));
-    _sauverOrganisation();
+    Future<void> _ajouterChapitre() async {
     _chargerChapitres();
-    _log('➕ Chapitre ajouté : $nom', kind: LogKind.ok);
+    if (_chapitres.isEmpty) {
+      _log('⚠️ Aucun fichier .md dans le dossier Chapitres.', kind: LogKind.warn);
+      return;
+    }
+    final choix = await showDialog<String>(context: context,
+        builder: (ctx) => _ChoixDialog(titre: 'Choisir un chapitre', items: _chapitres));
+    if (choix == null || choix.trim().isEmpty) return;
+    setState(() => _organisation.add({
+      'type': 'chapitre',
+      'fichier_source': choix.trim(),
+      'chapitre_ligne1': choix.trim(),
+      'titre': choix.trim(),
+    }));
+    _sauverOrganisation();
+    _log('➕ Chapitre ajouté : $choix', kind: LogKind.ok);
   }
 
-  Future<void> _ajouterImage() async {
+
+
+    Future<void> _ajouterImage() async {
     final dir = Directory('$_scriptsDir\\Images');
     if (!dir.existsSync()) { _log('⚠️ Dossier Images introuvable.', kind: LogKind.warn); return; }
-    final imgs = dir.listSync().whereType<File>()
-        .map((f) => f.uri.pathSegments.last)
-        .where((n) => n.toLowerCase().endsWith('.png') || n.toLowerCase().endsWith('.jpg'))
-        .toList()..sort();
-    if (imgs.isEmpty) { _log('⚠️ Aucune image dans le dossier Images.', kind: LogKind.warn); return; }
-    final choix = await showDialog<String>(context: context,
-        builder: (ctx) => _ChoixDialog(titre: 'Choisir une image', items: imgs));
-    if (choix == null) return;
-    setState(() => _organisation.add({'type': 'image', 'image': choix}));
+    final fichiersParNom = <String, String>{};
+    for (final f in dir.listSync().whereType<File>()) {
+      final nom = f.uri.pathSegments.last;
+      final ext = nom.toLowerCase();
+      if (ext.endsWith('.png') || ext.endsWith('.jpg') ||
+          ext.endsWith('.jpeg') || ext.endsWith('.webp') ||
+          ext.endsWith('.bmp')) {
+        final idx = nom.lastIndexOf('.');
+        final nomAffiche = idx > 0 ? nom.substring(0, idx) : nom;
+        fichiersParNom[nomAffiche] = nom;
+      }
+    }
+    final items = fichiersParNom.keys.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    if (items.isEmpty) { _log('⚠️ Aucune image dans le dossier Images.', kind: LogKind.warn); return; }
+    final choixAffiche = await showDialog<String>(context: context,
+        builder: (ctx) => _ChoixDialog(titre: 'Choisir une image', items: items));
+    if (choixAffiche == null || choixAffiche.trim().isEmpty) return;
+    final vraiNom = fichiersParNom[choixAffiche] ?? choixAffiche;
+    setState(() => _organisation.add({'type': 'image', 'image': vraiNom}));
     _sauverOrganisation();
-    _log('➕ Image ajoutée : $choix', kind: LogKind.ok);
+    _log('➕ Image ajoutée : $choixAffiche', kind: LogKind.ok);
   }
+
+
 
   void _log(String text, {LogKind kind = LogKind.line}) {
     setState(() => _logs.add(LogLine(text, kind)));
@@ -693,7 +764,8 @@ Future<void> _lireDocument(String type) async {
 
   Future<void> _corriger() => _run('Vérification orthographique', () async {
     if (_chapitre == null) { _log('⚠️ Sélectionnez un chapitre.', kind: LogKind.warn); return; }
-    final file = File('$_scriptsDir\\Chapitres\\$_chapitre');
+    final _chapitreFichier = _chapitre!.toLowerCase().endsWith('.md') ? _chapitre! : '$_chapitre.md';
+    final file = File('$_scriptsDir\\Chapitres\\$_chapitreFichier');
     final texte = await file.readAsString();
     _log('🔍 Analyse de « $_chapitre »…', kind: LogKind.head);
     final ms = await _spell.checkText(texte, level: _spellLevel, variant: _spellVariant,
@@ -974,29 +1046,105 @@ Widget _ligneRegistre(String k, String v) {
   }
 
   // ══ 1. INFORMATIONS ══
+        Widget _boutonRond(String label, String emoji, VoidCallback onTap) {
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Material(color: Colors.transparent,
+        child: InkWell(borderRadius: BorderRadius.circular(28), onTap: onTap,
+          child: Container(width: 52, height: 52,
+            decoration: BoxDecoration(shape: BoxShape.circle,
+              color: AntiqueTheme.bloodInk,
+              border: Border.all(color: AntiqueTheme.brass, width: 1.5)),
+            child: Center(child: Text(emoji, style: const TextStyle(fontSize: 20)))))),
+      const SizedBox(height: 4),
+      Text(label, textAlign: TextAlign.center,
+        style: GoogleFonts.cinzel(fontSize: 9, fontWeight: FontWeight.w700,
+            color: AntiqueTheme.bloodInk, letterSpacing: 0.5)),
+    ]);
+  }
+
+    Widget _boutonLivre(String emoji, String label, VoidCallback onTap) {
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Material(color: Colors.transparent, child: InkWell(
+        borderRadius: BorderRadius.circular(30), onTap: onTap,
+        child: Container(width: 56, height: 56,
+          decoration: BoxDecoration(shape: BoxShape.circle,
+            gradient: const RadialGradient(colors: [Color(0xFFf6efdd), Color(0xFFe2d3ae)]),
+            border: Border.all(color: AntiqueTheme.brass, width: 2),
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3, offset: Offset(1, 2))]),
+          child: Center(child: Text(emoji, style: const TextStyle(fontSize: 21)))))),
+      const SizedBox(height: 4),
+      Text(label, textAlign: TextAlign.center, style: GoogleFonts.cinzel(
+          fontSize: 9, fontWeight: FontWeight.w700,
+          color: AntiqueTheme.bloodInk, letterSpacing: 0.5)),
+    ]);
+  }
+
+  Widget _ligneBoutonsLivre(List<Widget> boutons) {
+    final children = <Widget>[];
+    for (int i = 0; i < boutons.length; i++) {
+      children.add(boutons[i]);
+      if (i < boutons.length - 1) children.add(const SizedBox(width: 16));
+    }
+    return Padding(padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: children));
+  }
+
   Widget _pageInfos() {
     return Padding(padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _titrePage('INFORMATIONS'),
         Expanded(child: SingleChildScrollView(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _champInfo('Titre complet du roman', _iTitre),
-          _champInfo('Sous-titre éventuel', _iSousTitre),
-          _champInfo("Nom de l'auteur (couverture)", _iAuteur),
-          Row(children: [
-            Expanded(child: _champInfo('Année de publication', _iAnnee)),
-            const SizedBox(width: 12),
-            Expanded(child: _champInfo('ISBN', _iIsbn)),
-          ]),
-          _champInfo('Dédicace', _iDedicace, lines: 2),
-          _champInfo('Épigraphe', _iEpigraphe, lines: 2),
-          const SizedBox(height: 12),
-          AntiqueButton(label: 'Enregistrer les informations', emoji: '💾',
-              onParchment: true, onTap: _sauverInfos),
+          if (_infosPage == 1) ...[
+            _champInfo('Titre complet du roman', _iTitre),
+            _champInfo('Sous-titre éventuel', _iSousTitre),
+            _champInfo("Nom de l'auteur (couverture)", _iAuteur),
+            Row(children: [
+              Expanded(child: _champInfo('Année de publication', _iAnnee)),
+              const SizedBox(width: 12),
+              Expanded(child: _champInfo('ISBN', _iIsbn)),
+            ]),
+            _champInfo('Dédicace', _iDedicace, lines: 2),
+            _champInfo('Épigraphe', _iEpigraphe, lines: 2),
+            _caseSommaire(),
+            const SizedBox(height: 12),
+            
+          ] else ...[
+            _champInfo('Éditeur', _iEditeur),
+            _champInfo('Autres livres du même auteur', _iAutresLivres, lines: 5),
+            _champInfo('Remerciements', _iRemerciements, lines: 4),
+            _champDropdownImages('Frontispice', _iFrontispice),
+            _champDropdownChapitres('Préface', _iPreface),
+            _champDropdownChapitres('Postface', _iPostface),
+            const SizedBox(height: 12),
+            _ligneBoutonsLivre([_boutonLivre('←', 'Page 1', () => setState(() => _infosPage = 1)), _boutonLivre('💾', 'Enregistrer', _sauverInfos)]),
+          ],
+          const SizedBox(height: 8),
+          _ligneBoutonsLivre([_boutonLivre('💾', 'Enregistrer', _sauverInfos), _boutonLivre('→', 'Page 2', () => setState(() => _infosPage = 2))]),
           const SizedBox(height: 8),
         ]))),
       ]));
   }
+
+  Widget _caseSommaire() {
+    return Padding(padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        SizedBox(width: 24, height: 24,
+          child: Checkbox(value: _iSommaire,
+            checkColor: AntiqueTheme.parchment,
+            activeColor: AntiqueTheme.bloodInk,
+            side: const BorderSide(color: AntiqueTheme.brass),
+            onChanged: (v) => setState(() => _iSommaire = v ?? true))),
+        const SizedBox(width: 10),
+        Expanded(child: Text('Sommaire (table des matières dans le livre)',
+            style: GoogleFonts.cinzel(fontSize: 12, fontWeight: FontWeight.w700,
+                color: AntiqueTheme.bloodInk, letterSpacing: 1))),
+      ]));
+  }
+
+
+
+
 
   Widget _champInfo(String label, TextEditingController ctrl, {int lines = 1}) {
     return Padding(padding: const EdgeInsets.symmetric(vertical: 6),
@@ -1014,6 +1162,91 @@ Widget _ligneRegistre(String k, String v) {
   }
 
   // ══ 2. ORGANISATION ══
+
+  Widget _champDropdownImages(String label, String? value) {
+    final images = _chargerListeImages();
+    final ok = images.contains(value);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: GoogleFonts.cinzel(fontSize: 12, fontWeight: FontWeight.w700,
+            color: AntiqueTheme.bloodInk, letterSpacing: 1)),
+        DropdownButton<String>(
+          value: ok ? value : null,
+          isExpanded: true,
+          hint: Text('— aucun —',
+              style: TextStyle(color: AntiqueTheme.brass.withOpacity(0.5))),
+          items: [for (final img in images)
+            DropdownMenuItem<String>(value: img, child: Text(img, overflow: TextOverflow.ellipsis))],
+          onChanged: (v) => setState(() {
+            if (label == 'Frontispice') _iFrontispice = v;
+          }),
+          style: AntiqueTheme.bodyText.copyWith(fontSize: 14),
+          dropdownColor: AntiqueTheme.parchment,
+          icon: Icon(Icons.arrow_drop_down, color: AntiqueTheme.bloodInk),
+        ),
+      ]),
+    );
+  }
+
+  Widget _champDropdownChapitres(String label, String? value) {
+    final chapitres = _chargerListeChapitres();
+    final ok = chapitres.contains(value);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: GoogleFonts.cinzel(fontSize: 12, fontWeight: FontWeight.w700,
+            color: AntiqueTheme.bloodInk, letterSpacing: 1)),
+        DropdownButton<String>(
+          value: ok ? value : null,
+          isExpanded: true,
+          hint: Text('— aucun —',
+              style: TextStyle(color: AntiqueTheme.brass.withOpacity(0.5))),
+          items: [for (final c in chapitres)
+            DropdownMenuItem<String>(value: c, child: Text(c, overflow: TextOverflow.ellipsis))],
+          onChanged: (v) => setState(() {
+            if (label == 'Préface') _iPreface = v;
+            if (label == 'Postface') _iPostface = v;
+          }),
+          style: AntiqueTheme.bodyText.copyWith(fontSize: 14),
+          dropdownColor: AntiqueTheme.parchment,
+          icon: Icon(Icons.arrow_drop_down, color: AntiqueTheme.bloodInk),
+        ),
+      ]),
+    );
+  }
+
+  List<String> _chargerListeImages() {
+    final dir = Directory('$_scriptsDir\\Images');
+    if (!dir.existsSync()) return [];
+    final liste = <String>[];
+    for (final f in dir.listSync().whereType<File>()) {
+      final nom = f.uri.pathSegments.last;
+      final e = nom.toLowerCase();
+      if (e.endsWith('.png') || e.endsWith('.jpg') || e.endsWith('.jpeg') ||
+          e.endsWith('.webp') || e.endsWith('.bmp')) {
+        final i = nom.lastIndexOf('.');
+        liste.add(i > 0 ? nom.substring(0, i) : nom);
+      }
+    }
+    liste.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return liste;
+  }
+
+  List<String> _chargerListeChapitres() {
+    final dir = Directory('$_scriptsDir\\Chapitres');
+    if (!dir.existsSync()) return [];
+    final liste = <String>[];
+    for (final f in dir.listSync().whereType<File>()) {
+      final nom = f.uri.pathSegments.last;
+      if (nom.toLowerCase().endsWith('.md')) {
+        liste.add(nom.substring(0, nom.length - 3));
+      }
+    }
+    liste.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return liste;
+  }
+
   Widget _pageOrganisation() {
     return Padding(padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1022,8 +1255,8 @@ Widget _ligneRegistre(String k, String v) {
           Text('${_organisation.length} élément(s) — actes, chapitres & images',
             style: AntiqueTheme.titlePage.copyWith(fontSize: 12)),
           const Spacer(),
-          InkWell(onTap: () { _chargerOrganisation(); setState(() {});
-              _log('🔄 Organisation rechargée.', kind: LogKind.ok); },
+          InkWell(onTap: () { _chargerChapitres(); _chargerImages(); _chargerOrganisation(); setState(() {});
+              _log('🔄 Chapitres, images et organisation rechargés.', kind: LogKind.ok); },
             child: Text('🔄 Recharger',
               style: GoogleFonts.cinzel(fontSize: 12, fontWeight: FontWeight.w700,
                   color: AntiqueTheme.bloodInk))),

@@ -56,3 +56,8 @@ Desktop.ini
 
 # ===== Eléments ignorés =====
 !backend/Chapitres/0.0_demo.md
+*.bak
+*.bak_*
+backend/export/
+backend/_cache_HD/
+

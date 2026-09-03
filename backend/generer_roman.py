@@ -114,7 +114,7 @@ CORRESPONDANCES = {
     ISBN: ('numéro isbn', 'isbn'),
     DEPOT: ('numéro de dépôt', 'dépôt légal'),
     ANNEE: ('année',),
-    EDITEUR: ("maison d'édition",),
+    EDITEUR: ("maison d'édition", 'editeur', 'éditeur'),
     COPYRIGHT: ('mention de copyright', 'copyright'),
     EDITION: ('édition',),
     SITE: ('site web',),
@@ -346,7 +346,7 @@ def _lire_json_brut():
     try:
         import json
         with open(CHEMIN_CONFIG_JSON, encoding='utf-8') as f:
-            return json.load(f)
+            return _normaliser_cles(json.load(f))
     except Exception:
         return None
 
@@ -354,14 +354,209 @@ def _lire_json_brut():
     try:
         import json
         with open(CHEMIN_CONFIG_JSON, encoding='utf-8') as f:
-            return json.load(f)
+            return _normaliser_cles(json.load(f))
     except Exception:
         return None
+
+
+def reordonner_structure_word_file(chemin):
+    """Crée les blocs manquants puis réassemble le Word dans l'ordre demandé."""
+    from docx import Document
+    from docx.oxml.ns import qn
+    from docx.shared import Pt, Inches
+    import json as _json, os as _os
+    doc = Document(chemin)
+    body = doc.element.body
+    sect_modele = body.find(qn('w:sectPr'))
+    inf = {}
+    try:
+        p = _os.path.join(BASE, 'Configuration_roman.json')
+        if _os.path.isfile(p):
+            inf = _infos_de(_json.load(open(p, encoding='utf-8')))
+    except Exception:
+        inf = {}
+    def val(*ks):
+        for k in ks:
+            v = inf.get(k)
+            if v: return str(v).strip()
+        return ''
+    ax = {'frontispice': val('frontispice', 'Frontispice'),
+          'preface': val('preface', 'Préface'),
+          'postface': val('postface', 'Postface'),
+          'remerciements': val('remerciements', 'Remerciements')}
+    sv = inf.get('sommaire')
+    ax['sommaire'] = sv if isinstance(sv, bool) else str(sv).strip().lower() != 'false'
+    def a_saut(el):
+        if el.tag.endswith('}p'):
+            for br in el.iter(qn('w:br')):
+                if br.get(qn('w:type')) == 'page': return True
+            if el.find(qn('w:pPr') + '/' + qn('w:sectPr')) is not None: return True
+        return False
+    elems = [el for el in body if el is not sect_modele]
+    blocs, cur = [], []
+    for el in elems:
+        cur.append(el)
+        if a_saut(el): blocs.append(cur); cur = []
+    if cur: blocs.append(cur)
+    def texte(blk):
+        return ' '.join(''.join(n.text or '' for n in el.iter(qn('w:t'))) for el in blk).strip()
+    def a_image(blk):
+        return any(True for _b in blk for _ in _b.iter(qn('w:drawing')))
+    tit_court = re.split(r'[–-]', val('titre complet du roman', 'T'))[0].strip().upper()
+    aut = val("nom de l'auteur (couverture)", 'Auteur')
+    trouve, contenu = {}, []
+    for blk in blocs:
+        t = texte(blk); low = t.lower(); cle = None
+        if 'table des matières' in low: cle = 'sommaire'
+        elif '©' in t or 'isbn' in low: cle = 'copyright'
+        elif val('dédicace','Dédicace') and val('dédicace','Dédicace')[:12] in t: cle = 'dedicace'
+        elif val('épigraphe','Épigraphe') and val('épigraphe','Épigraphe')[:12] in t: cle = 'epigraphe'
+        elif low.startswith('préface'): cle = 'preface'
+        elif low.startswith('postface'): cle = 'postface'
+        elif low.startswith('remerciements'): cle = 'remerciements'
+        elif a_image(blk): cle = 'frontispice'
+        elif tit_court and tit_court in t and '©' not in t:
+            cle = 'titre' if (aut and aut.lower() in low) or len(t) > len(tit_court) + 8 else 'faux_titre'
+        if cle and cle not in trouve: trouve[cle] = blk
+        else: contenu.append(blk)
+    # ── création des blocs manquants ──
+    if 'garde' not in trouve:
+        trouve['garde'] = [doc.add_paragraph()._element]
+    if 'faux_titre' not in trouve and val('titre complet du roman'):
+        p = doc.add_paragraph(); p.alignment = 1
+        r = p.add_run(val('titre complet du roman')); r.font.size = Pt(11)
+        trouve['faux_titre'] = [p._element]
+    if 'frontispice' not in trouve and ax['frontispice']:
+        fp = _os.path.join(BASE, 'Images', ax['frontispice'])
+        if not _os.path.isfile(fp):
+            for ext in ('.png', '.jpg', '.jpeg', '.webp', '.bmp'):
+                if _os.path.isfile(fp + ext): fp += ext; break
+        if _os.path.isfile(fp):
+            try:
+                doc.add_picture(fp, width=Inches(4.2))
+                trouve['frontispice'] = [doc.paragraphs[-1]._element]
+            except Exception: pass
+    for cle, titre in (('preface', 'Préface'), ('postface', 'Postface')):
+        if cle not in trouve and ax[cle]:
+            pc = _os.path.join(BASE, 'Chapitres', ax[cle] + '.md')
+            if _os.path.isfile(pc):
+                els = []
+                h = doc.add_paragraph(titre)
+                try: h.style = doc.styles['Heading 1']
+                except Exception: pass
+                els.append(h._element)
+                for ln in open(pc, encoding='utf-8').read().split('\n'):
+                    ln = ln.strip()
+                    if ln and not ln.startswith('# '):
+                        els.append(doc.add_paragraph(ln)._element)
+                trouve[cle] = els
+    if 'remerciements' not in trouve and ax['remerciements']:
+        els = []
+        h = doc.add_paragraph('Remerciements')
+        try: h.style = doc.styles['Heading 1']
+        except Exception: pass
+        els.append(h._element)
+        for ln in ax['remerciements'].split('\n'):
+            if ln.strip(): els.append(doc.add_paragraph(ln.strip())._element)
+        trouve['remerciements'] = els
+    # ── réassemblage dans l'ordre demandé ──
+    for el in list(body):
+        if el is not sect_modele: body.remove(el)
+    def ajouter(blk, saut):
+        if saut and blk:
+            lp = None
+            for el in reversed(list(body)):
+                if el.tag.endswith('}p'): lp = el; break
+            if lp is not None:
+                pPr = lp.get_or_add_pPr()
+                sect = deepcopy(sect_modele) if sect_modele is not None else OxmlElement('w:sectPr')
+                t = sect.find(qn('w:type'))
+                if t is None:
+                    t = OxmlElement('w:type'); sect.insert(0, t)
+                t.set(qn('w:val'), 'oddPage' if saut == 'impair' else ('evenPage' if saut == 'pair' else 'nextPage'))
+                old = pPr.find(qn('w:sectPr'))
+                if old is not None: pPr.remove(old)
+                for r in list(lp.findall(qn('w:r'))):
+                    for br in r.findall(qn('w:br')):
+                        if br.get(qn('w:type')) == 'page': lp.remove(r)
+                pPr.append(sect)
+        for el in blk: body.append(el)
+    from copy import deepcopy
+    from docx.oxml import OxmlElement
+    ordre = ['garde', 'faux_titre', 'frontispice', 'titre', 'copyright', 'dedicace', 'epigraphe']
+    if ax['sommaire']: ordre.append('sommaire')
+    ordre.append('preface')
+    for cle in ordre:
+        if trouve.get(cle): ajouter(trouve[cle], 'impair' if cle not in ('copyright',) else 'pair')
+    for i, blk in enumerate(contenu):
+        ajouter(blk, 'impair' if i == 0 else None)
+    for cle in ('postface', 'remerciements'):
+        if trouve.get(cle): ajouter(trouve[cle], 'impair')
+    body.append(sect_modele)
+    doc.save(chemin)
+    return [b for b in ordre if trouve.get(b)] + ['manuscrit']
+
+
+def _sauver_et_reordonner(doc, chemin):
+    doc.save(chemin)
+    try:
+        reordonner_structure_word_file(chemin)
+        print('   📚 Structure éditoriale appliquée au Word.')
+    except Exception as e:
+        print('   ⚠️  Réordonnancement ignoré :', e)
+
+
+
+def lire_annexes():
+    ax = {'sommaire': True}
+    j = {}
+    try:
+        import json as _json2
+        p = os.path.join(BASE, 'Configuration_roman.json')
+        if os.path.isfile(p):
+            j = _infos_de(_json2.load(open(p, encoding='utf-8')))
+    except Exception:
+        j = {}
+    def g(*cles):
+        for c in cles:
+            v = j.get(c)
+            if v: return str(v).strip()
+        return ''
+    ax['editeur'] = g('editeur', 'Éditeur', 'Editeur', 'maison_edition')
+    ax['autres_livres'] = g('autres_livres', 'Autres livres du même auteur')
+    ax['remerciements'] = g('remerciements', 'Remerciements')
+    ax['frontispice'] = g('frontispice', 'Frontispice')
+    ax['preface'] = g('preface', 'Préface')
+    ax['postface'] = g('postface', 'Postface')
+    sv = j.get('sommaire')
+    ax['sommaire'] = sv if isinstance(sv, bool) else (str(sv).strip().lower() != 'false' if sv is not None else True)
+    return ax
+
+def _get_infos(d):
+    d = d or {}
+    if 'informations' in d: return d['informations'] or {}
+    if 'informations ' in d: return d['informations '] or {}
+    for k, v in d.items():
+        if str(k).strip() == 'informations' and isinstance(v, dict): return v
+    return {}
+
+
+def _get_section(d, nom, defaut=None):
+    """Recherche tolérante d'une section JSON (clés avec espaces finaux)."""
+    if defaut is None: defaut = {}
+    if not isinstance(d, dict): return defaut
+    if nom in d and d[nom] is not None: return d[nom]
+    for k, v in d.items():
+        if str(k).strip() == nom and v is not None: return v
+    return defaut
+
+def _section_infos(d):
+    return _get_section(d, 'informations', {}) or {}
 
 def lire_infos():
     infos = {l: '' for l in CHAMPS_LABELS}
     source = 'défaut'
-    ji = (_lire_json_brut() or {}).get('informations', {}) or {}
+    ji = _get_infos(_lire_json_brut())
     for label in CHAMPS_LABELS:
         for k, v in ji.items():
             if v is not None and str(v).strip() and nettoyer(k).lower().startswith(CORRESPONDANCES[label]):
@@ -371,7 +566,7 @@ def lire_infos():
     if JSON_OK:
         try:
             data = cs.charger_configuration()
-            jj = (data or {}).get('informations', {}) or {}
+            jj = _infos_de(data)
             for label, cle in JSON_INFOS_KEYS.items():
                 v = jj.get(cle, '')
                 if v and not infos[label]:
@@ -1399,7 +1594,7 @@ def main():
     def pages_courantes(est):
         temp = chemin_temporaire_docx('kdp_comptage_')
         try:
-            doc.save(temp)
+            _sauver_et_reordonner(doc, temp)
             n = compter_pages_reelles(temp)
             return n if n is not None else est
         except OSError as e:
@@ -1491,7 +1686,7 @@ def main():
     def pages_courantes_fin(est):
         temp = chemin_temporaire_docx('kdp_comptage_')
         try:
-            doc.save(temp)
+            _sauver_et_reordonner(doc, temp)
             n = compter_pages_reelles(temp)
             return n if n is not None else est
         except OSError:
@@ -1533,7 +1728,8 @@ def main():
     nom = slug(infos[TITRE] or 'roman')
     if infos[SOUS_TITRE]:
         nom += '_' + slug(infos[SOUS_TITRE])
-    nom_fichier = os.path.join(BASE, nom + '_KDP.docx')
+    _doss = os.path.join(BASE, 'export'); os.makedirs(_doss, exist_ok=True)
+    nom_fichier = os.path.join(_doss, nom + '_KDP.docx')
     nom_fichier = enregistrer_docx_securise(doc, nom_fichier)
 
     # ── v2.9.4 : convergence des marges sur le nombre de pages RÉEL ──
@@ -1552,7 +1748,41 @@ def main():
                 sec.right_margin = Inches(gutter)
             nom_fichier = enregistrer_docx_securise(doc, nom_fichier)
             pages_reelles = maj_champs_word(nom_fichier) or pages_reelles
-        afficher_statistiques(pages_reelles, titre_aff)
+        # ── CORRECTIF annexes Word : postface / remerciements / autres livres ──
+    try:
+        _ax = lire_annexes()
+        def _titre_h(t):
+            p = doc.add_paragraph(t)
+            try: p.style = doc.styles['Heading 1']
+            except Exception: pass
+            return p
+        if _ax.get('postface'):
+            _pc = os.path.join(BASE, 'Chapitres', _ax['postface'] + '.md')
+            if os.path.isfile(_pc):
+                doc.add_page_break(); _titre_h('Postface')
+                for _ln in open(_pc, encoding='utf-8').read().split('\n'):
+                    _ln = _ln.strip()
+                    if _ln and not _ln.startswith('# '): doc.add_paragraph(_ln)
+        if _ax.get('remerciements'):
+            doc.add_page_break(); _titre_h('Remerciements')
+            for _ln in _ax['remerciements'].split('\n'):
+                if _ln.strip(): doc.add_paragraph(_ln.strip())
+        if _ax.get('autres_livres'):
+            doc.add_page_break(); _titre_h('Du même auteur')
+            for _ln in _ax['autres_livres'].split('\n'):
+                if _ln.strip(): doc.add_paragraph('• ' + _ln.strip())
+        if not _ax.get('sommaire', True):
+            for _p in list(doc.paragraphs):
+                if 'Table des matières' in _p.text:
+                    _p.clear()
+    except Exception:
+        pass
+    try:
+        reordonner_structure_word_file(nom_fichier)
+        print('   📚 Structure éditoriale appliquée au Word.')
+    except Exception as e:
+        print('   ⚠️ Réordonnancement Word ignoré :', e)
+    afficher_statistiques(pages_reelles, titre_aff)
     # ── CORRECTIF registre : régénère registre.json pour l'interface ──
     try:
         import json as _json_reg
@@ -1636,3 +1866,16 @@ def _normaliser_registre():
             pass
 import atexit as _atx_reg
 _atx_reg.register(_normaliser_registre)
+
+def _normaliser_cles(d):
+    """Recadre les clés (espaces finaux du JSON du menu Informations)."""
+    if not isinstance(d, dict):
+        return d
+    return {str(k).strip(): (_normaliser_cles(v) if isinstance(v, dict) else v)
+            for k, v in d.items()}
+
+def _infos_de(d):
+    """Retourne le sous-dictionnaire 'informations' normalisé (tolérant)."""
+    d = _normaliser_cles(d or {})
+    v = d.get('informations')
+    return v if isinstance(v, dict) else {}
