@@ -26,6 +26,14 @@ String? trouverDossierBackend() {
   return null;
 }
 
+/// Retourne le Python embarqué placé à côté du dossier backend, s'il existe.
+String? trouverPythonAutonome(String scriptsDir) {
+  final python =
+      File('${Directory(scriptsDir).parent.path}${Platform.pathSeparator}python'
+          '${Platform.pathSeparator}python.exe');
+  return python.existsSync() ? python.path : null;
+}
+
 /// Pont entre Flutter et le moteur Python.
 class PythonEngine {
   final String pythonPath;

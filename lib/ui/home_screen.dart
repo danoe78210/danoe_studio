@@ -227,6 +227,11 @@ class _HomeScreenState extends State<HomeScreen>
       }
     });
     _chargerConfigSync();
+    final pythonAutonome = trouverPythonAutonome(_scriptsDir);
+    if (_pythonPath == 'python' && pythonAutonome != null) {
+      _pythonPath = pythonAutonome;
+      _engine = PythonEngine(scriptsDir: _scriptsDir, pythonPath: _pythonPath);
+    }
     _assurerExport();
     _chargerChapitres();
     _chargerOrganisation();
