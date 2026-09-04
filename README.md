@@ -1,6 +1,6 @@
 # 🖋️ Danoë Studio — Machine à romans pour écrivains
 
-**Version 3.3** · Windows 10/11 · Gratuit · Aucune installation requise
+**Version 3.5.0** · Windows 10/11 · Gratuit · Version autonome disponible
 
 Danoë Studio transforme vos chapitres Markdown en livres brochés professionnels conformes **Amazon KDP** : Word (.docx), PDF KDP et EPUB 3, avec lettrines, en-têtes, table des matières dynamique et images 300 DPI.
 
@@ -10,9 +10,27 @@ Danoë Studio transforme vos chapitres Markdown en livres brochés professionnel
 
 ## 📥 Téléchargement
 
-👉 **[Télécharger Danoë Studio v3.3](https://github.com/danoe78210/danoe_studio/releases/tag/v3.3)**
+👉 **[Télécharger la version Windows autonome v3.5.0](https://github.com/danoe78210/danoe_studio/releases/download/v3.5.0/Danoestudio_Autonome_Windows_v3.5.0.zip)**
 
-Décompressez `DanoeStudio-Windows-v3.3.zip` et lancez `danoestudio.exe`. **Aucune installation requise.**
+La version autonome contient l’application Windows, le runtime Flutter, Python 3.12 et les dépendances du backend. **Aucun téléchargement de Flutter ou Python n’est nécessaire.**
+
+Décompressez `Danoestudio_Autonome_Windows_v3.5.0.zip` et lancez `danoestudio.exe`.
+
+Une archive portable plus légère, sans Python embarqué, est également disponible dans la [Release v3.5.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.5.0).
+
+---
+
+## ✨ Nouveautés v3.5.0
+
+### 🖋️ Progression et fermeture
+- Barre de progression animée : une plume de style ancien trace une ligne d’encre au fil de l’avancement.
+- Bouton Antique **Fermer le livre** sur la page gauche, avec confirmation avant fermeture.
+- Nettoyage du cache temporaire backend lors de la fermeture de l’application.
+
+### 🪟 Version Windows autonome
+- Runtime Flutter Windows inclus dans l’exécutable de production.
+- Python 3.12 et les dépendances backend inclus dans l’archive autonome.
+- Détection automatique du Python embarqué, avec conservation du chemin Python personnalisé en développement.
 
 ---
 
@@ -69,7 +87,11 @@ Détail complet sur la page **[Règles KDP implémentées](https://danoe78210.gi
 ## 🛠️ Utilisation
 
 ### Interface graphique (recommandé)
-Lancez `danoestudio.exe`, puis **Production → Générer le livre / PDF KDP / Ebook KDP**.
+1. Décompressez l’archive autonome Windows.
+2. Lancez `danoestudio.exe`.
+3. Ouvrez **Production → Générer le livre / PDF KDP / Ebook KDP**.
+
+Les fichiers générés sont placés dans `backend/export/`. Le bouton **Fermer le livre** vide le cache temporaire avant de fermer l’application.
 
 ### Ligne de commande
 ```powershell
@@ -91,6 +113,7 @@ Les livrables sont dans `backend/export/`.
 ```
 danoe_studio/
 ├── lib/ui/home_screen.dart       # Interface Flutter
+├── lib/services/python_engine.dart # Détection et lancement du backend Python
 ├── backend/
 │   ├── generer_roman.py          # Générateur Word
 │   ├── generer_pdf_direct.py     # Générateur PDF
@@ -102,9 +125,19 @@ danoe_studio/
 └── docs/                         # Site + règles KDP
 ```
 
+Dans l’archive autonome distribuée, le runtime Python est placé dans `python/` à côté de `backend/` et de `danoestudio.exe`.
+
 ---
 
-## 🔧 Prérequis (développement)
+## 🔧 Prérequis (utilisation)
+
+### Windows autonome
+
+- Windows 10 ou 11
+- Aucun prérequis logiciel : Python et Flutter sont inclus dans l’archive autonome
+- Microsoft Word reste nécessaire pour les fonctions de conversion Word → PDF selon la configuration utilisée
+
+### Développement
 
 - Flutter 3.x, Python 3.10+, Microsoft Word
 - `pip install python-docx openpyxl Pillow reportlab pypdf pywin32`
@@ -115,6 +148,7 @@ danoe_studio/
 
 | Version | Apports |
 |---|---|
+| **v3.5.0** | Version Windows autonome, plume de progression, fermeture avec nettoyage du cache |
 | **v3.3** | Registre affiché, compilation Flutter réparée, correctifs idempotents |
 | v3.2 | Registre fiable, EPUB export/, parité consolidée, robustesse |
 | v3.1 | Conversion Word→PDF, parité complète, règles centralisées, landing page KDP |
