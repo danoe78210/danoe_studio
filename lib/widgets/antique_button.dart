@@ -11,6 +11,7 @@ class AntiqueButton extends StatefulWidget {
   final VoidCallback onTap;
   final bool primary;
   final bool onParchment;
+  final bool compact;
 
   const AntiqueButton({
     super.key,
@@ -19,6 +20,7 @@ class AntiqueButton extends StatefulWidget {
     required this.onTap,
     this.primary = false,
     this.onParchment = false,
+    this.compact = false,
   });
 
   @override
@@ -30,9 +32,8 @@ class _AntiqueButtonState extends State<AntiqueButton> {
 
   @override
   Widget build(BuildContext context) {
-    final fg = widget.onParchment
-        ? AntiqueTheme.inkSepia
-        : AntiqueTheme.agedGold;
+    final fg =
+        widget.onParchment ? AntiqueTheme.inkSepia : AntiqueTheme.agedGold;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
@@ -41,13 +42,15 @@ class _AntiqueButtonState extends State<AntiqueButton> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(
+              horizontal: widget.compact ? 12 : 16,
+              vertical: widget.compact ? 7 : 12),
           decoration: BoxDecoration(
             color: widget.onParchment
                 ? (_hover ? const Color(0x14B8860B) : const Color(0x0F000000))
                 : (_hover
-                      ? AntiqueTheme.leatherDeep
-                      : AntiqueTheme.leatherDark),
+                    ? AntiqueTheme.leatherDeep
+                    : AntiqueTheme.leatherDark),
             gradient: widget.primary ? AntiqueTheme.leatherGradient : null,
             borderRadius: BorderRadius.circular(4),
             border: Border.all(color: AntiqueTheme.brass, width: 1.2),
@@ -69,14 +72,15 @@ class _AntiqueButtonState extends State<AntiqueButton> {
           child: Row(
             children: [
               if (widget.emoji != null) ...[
-                Text(widget.emoji!, style: const TextStyle(fontSize: 18)),
+                Text(widget.emoji!,
+                    style: TextStyle(fontSize: widget.compact ? 16 : 18)),
                 const SizedBox(width: 10),
               ],
               Expanded(
                 child: Text(
                   widget.label,
                   style: GoogleFonts.cinzel(
-                    fontSize: 14,
+                    fontSize: widget.compact ? 12 : 14,
                     fontWeight: FontWeight.w600,
                     color: fg,
                     letterSpacing: 1,

@@ -233,6 +233,22 @@ def initialiser():
         ajouter_onglet_style_si_absent()
 
 
+def _normaliser_cles(d):
+    if isinstance(d, dict):
+        return {str(k).strip(): _normaliser_cles(v) for k, v in d.items()}
+    if isinstance(d, list):
+        return [_normaliser_cles(x) for x in d]
+    if isinstance(d, str):
+        return d.strip()
+    return d
+
+
+def _infos_de(d):
+    d = _normaliser_cles(d or {})
+    infos = d.get('informations') if isinstance(d, dict) else None
+    return infos if isinstance(infos, dict) else {}
+
+
 def rafraichir_json_depuis_excel():
     if not JSON_OK:
         print('   ⚠️  Module configuration_store indisponible.')
@@ -383,7 +399,8 @@ def reordonner_structure_word_file(chemin):
     ax = {'frontispice': val('frontispice', 'Frontispice'),
           'preface': val('preface', 'Préface'),
           'postface': val('postface', 'Postface'),
-          'remerciements': val('remerciements', 'Remerciements')}
+            'remerciements': val('remerciements', 'Remerciements'),
+            'autres_livres': val('autres_livres', 'Autres livres du même auteur')}
     sv = inf.get('sommaire')
     ax['sommaire'] = sv if isinstance(sv, bool) else str(sv).strip().lower() != 'false'
     def a_saut(el):
@@ -459,6 +476,15 @@ def reordonner_structure_word_file(chemin):
         for ln in ax['remerciements'].split('\n'):
             if ln.strip(): els.append(doc.add_paragraph(ln.strip())._element)
         trouve['remerciements'] = els
+    if 'autres_livres' not in trouve and ax['autres_livres']:
+        els = []
+        h = doc.add_paragraph('Du même auteur')
+        try: h.style = doc.styles['Heading 1']
+        except Exception: pass
+        els.append(h._element)
+        for ln in ax['autres_livres'].split('\n'):
+            if ln.strip(): els.append(doc.add_paragraph('• ' + ln.strip())._element)
+        trouve['autres_livres'] = els
     # ── réassemblage dans l'ordre demandé ──
     for el in list(body):
         if el is not sect_modele: body.remove(el)
@@ -490,7 +516,7 @@ def reordonner_structure_word_file(chemin):
         if trouve.get(cle): ajouter(trouve[cle], 'impair' if cle not in ('copyright',) else 'pair')
     for i, blk in enumerate(contenu):
         ajouter(blk, 'impair' if i == 0 else None)
-    for cle in ('postface', 'remerciements'):
+    for cle in ('postface', 'remerciements', 'autres_livres'):
         if trouve.get(cle): ajouter(trouve[cle], 'impair')
     body.append(sect_modele)
     doc.save(chemin)
@@ -1173,7 +1199,7 @@ def ajouter_chapitre(titre, items, sans_titre=False):
             p = doc.add_paragraph()
             p.style = styles['TitreChapitre']
             run_style(p, titre, POLICE_TITRES, STYLE['taille_chap1'], True)
-        ligne_vide(1)
+        ligne_vide(2)
     premier = True
     for kind, texte in items:
         if kind == 'h1':
@@ -1181,14 +1207,14 @@ def ajouter_chapitre(titre, items, sans_titre=False):
             p = doc.add_paragraph()
             p.style = styles['TitreChapitre']
             run_style(p, texte, POLICE_TITRES, STYLE['taille_chap1'], True)
-            ligne_vide(1)
+            ligne_vide(2)
             premier = True
         elif kind == 'h2':
             doc.add_page_break()
             p = doc.add_paragraph()
             p.style = styles['TitreSousChap']
             run_style(p, texte, POLICE_CORPS, STYLE['taille_sous'], True)
-            ligne_vide(1)
+            ligne_vide(2)
             premier = True
         elif kind == 'sep':
             p = doc.add_paragraph()
@@ -1867,15 +1893,3 @@ def _normaliser_registre():
 import atexit as _atx_reg
 _atx_reg.register(_normaliser_registre)
 
-def _normaliser_cles(d):
-    """Recadre les clés (espaces finaux du JSON du menu Informations)."""
-    if not isinstance(d, dict):
-        return d
-    return {str(k).strip(): (_normaliser_cles(v) if isinstance(v, dict) else v)
-            for k, v in d.items()}
-
-def _infos_de(d):
-    """Retourne le sous-dictionnaire 'informations' normalisé (tolérant)."""
-    d = _normaliser_cles(d or {})
-    v = d.get('informations')
-    return v if isinstance(v, dict) else {}

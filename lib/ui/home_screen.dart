@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:path/path.dart' as path;
 import 'dart:math' as math;
+import 'package:path/path.dart' as path;
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/antique_theme.dart';
@@ -20,7 +19,6 @@ import '../widgets/page_curl.dart';
 import '../widgets/qr_code_card.dart';
 import '../services/python_engine.dart';
 import '../services/spellchecker_service.dart';
-import 'k2000_scanner.dart';
 
 enum LogKind { line, ok, warn, head }
 
@@ -62,11 +60,36 @@ class _AppSettings {
 }
 
 const List<String> kPolices = [
-  'Aptos', 'Cinzel', 'Garamond', 'Times New Roman', 'Georgia',
-  'Calibri', 'Arial', 'Book Antiqua', 'Palatino Linotype', 'Cambria',
+  'Aptos',
+  'Cinzel',
+  'Garamond',
+  'Times New Roman',
+  'Georgia',
+  'Calibri',
+  'Arial',
+  'Book Antiqua',
+  'Palatino Linotype',
+  'Cambria',
 ];
-const List<String> kTaillesTexte = ['10', '10.5', '11', '11.5', '12', '13', '14'];
-const List<String> kTaillesTitres = ['12', '13', '14', '16', '18', '20', '22', '24'];
+const List<String> kTaillesTexte = [
+  '10',
+  '10.5',
+  '11',
+  '11.5',
+  '12',
+  '13',
+  '14'
+];
+const List<String> kTaillesTitres = [
+  '12',
+  '13',
+  '14',
+  '16',
+  '18',
+  '20',
+  '22',
+  '24'
+];
 const List<String> kInterlignes = ['1.0', '1.15', '1.25', '1.5'];
 
 const List<String> kFormats = [
@@ -86,7 +109,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   static const String _defaultScriptsDir = r'C:\Users\danao\Downloads\Python';
 
   String _scriptsDir = trouverDossierBackend() ?? _defaultScriptsDir;
@@ -101,7 +125,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String _titresSize = '14';
   String _interligne = '1.0';
 
-  late PythonEngine _engine = PythonEngine(scriptsDir: _scriptsDir, pythonPath: _pythonPath);
+  late PythonEngine _engine =
+      PythonEngine(scriptsDir: _scriptsDir, pythonPath: _pythonPath);
   final SpellcheckerService _spell = SpellcheckerService();
 
   final List<LogLine> _logs = [];
@@ -110,7 +135,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String _tacheCourante = '';
   String? _chapitre;
   List<String> _chapitres = [];
-  List<String> _images = [];
   List<Map<String, dynamic>> _organisation = [];
   double _progressTarget = 0;
   String _phase = '';
@@ -122,32 +146,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int _cible = 0;
   bool _turning = false;
   double _turnT = 0;
-  late final AnimationController _flip =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+  late final AnimationController _flip = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 900));
 
   // ══ INFOS DU LIVRE ══
-    final TextEditingController _iEditeur = TextEditingController();
+  final TextEditingController _iEditeur = TextEditingController();
   final TextEditingController _iAutresLivres = TextEditingController();
   int _infosPage = 1;
   bool _iSommaire = true;
-final TextEditingController _iTitre = TextEditingController();
+  final TextEditingController _iTitre = TextEditingController();
   final TextEditingController _iSousTitre = TextEditingController();
   final TextEditingController _iAuteur = TextEditingController();
   final TextEditingController _iAnnee = TextEditingController();
   final TextEditingController _iIsbn = TextEditingController();
+  final TextEditingController _iDepotLegal = TextEditingController();
+  final TextEditingController _iCopyright = TextEditingController();
+  final TextEditingController _iEdition = TextEditingController();
+  final TextEditingController _iSiteWeb = TextEditingController();
+  final TextEditingController _iAvertissement = TextEditingController();
   final TextEditingController _iDedicace = TextEditingController();
   final TextEditingController _iEpigraphe = TextEditingController();
   final TextEditingController _iRemerciements = TextEditingController();
   String? _iFrontispice;
   String? _iPreface;
   String? _iPostface;
-
-
-
-
-
-
-
 
   String get _configPath {
     final home = Platform.environment['USERPROFILE'] ?? '.';
@@ -160,7 +182,9 @@ final TextEditingController _iTitre = TextEditingController();
   String get _exportPath => '$_scriptsDir\\export';
 
   void _assurerExport() {
-    try { Directory(_exportPath).createSync(recursive: true); } catch (_) {}
+    try {
+      Directory(_exportPath).createSync(recursive: true);
+    } catch (_) {}
   }
 
   /// Déplace tous les fichiers générés (.docx/.pdf/.epub) vers export/
@@ -178,7 +202,10 @@ final TextEditingController _iTitre = TextEditingController();
             if (File(dest).existsSync()) File(dest).deleteSync();
             f.renameSync(dest);
           } catch (_) {
-            try { f.copySync(dest); f.deleteSync(); } catch (_) {}
+            try {
+              f.copySync(dest);
+              f.deleteSync();
+            } catch (_) {}
           }
         }
       }
@@ -189,16 +216,19 @@ final TextEditingController _iTitre = TextEditingController();
   @override
   void initState() {
     super.initState();
-    _flip.addListener(() => setState(() => _turnT = Curves.easeInOut.transform(_flip.value)));
+    _flip.addListener(
+        () => setState(() => _turnT = Curves.easeInOut.transform(_flip.value)));
     _flip.addStatusListener((s) {
       if (s == AnimationStatus.completed) {
-        setState(() { _page = _cible; _turning = false; });
+        setState(() {
+          _page = _cible;
+          _turning = false;
+        });
       }
     });
     _chargerConfigSync();
     _assurerExport();
     _chargerChapitres();
-    _chargerImages();
     _chargerOrganisation();
     _chargerInfos();
     _log('✅ Danoë Studio prêt.', kind: LogKind.ok);
@@ -210,19 +240,33 @@ final TextEditingController _iTitre = TextEditingController();
     _creep?.cancel();
     _flip.dispose();
     _scroll.dispose();
-    _iTitre.dispose(); _iSousTitre.dispose(); _iAuteur.dispose();
-    _iAnnee.dispose(); _iIsbn.dispose(); _iDedicace.dispose(); _iEpigraphe.dispose();
+    _iTitre.dispose();
+    _iSousTitre.dispose();
+    _iAuteur.dispose();
+    _iAnnee.dispose();
+    _iIsbn.dispose();
+    _iDepotLegal.dispose();
+    _iCopyright.dispose();
+    _iEdition.dispose();
+    _iSiteWeb.dispose();
+    _iAvertissement.dispose();
+    _iDedicace.dispose();
+    _iEpigraphe.dispose();
     super.dispose();
   }
 
   void _allerA(int i) {
     if (_turning || i == _page) return;
-    setState(() { _depuis = _page; _cible = i; _turning = true; });
+    setState(() {
+      _depuis = _page;
+      _cible = i;
+      _turning = true;
+    });
     _flip.forward(from: 0);
   }
 
-  KeyEventResult _onKey(FocusNode node, RawKeyEvent event) {
-    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final n = _rubanLabels.length;
     if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
         event.logicalKey == LogicalKeyboardKey.pageDown) {
@@ -244,18 +288,22 @@ final TextEditingController _iTitre = TextEditingController();
         final data = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
         final sv = data['scriptsDir'] as String?;
         final det = trouverDossierBackend();
-        _scriptsDir = (sv != null && Directory(sv).existsSync()) ? sv : (det ?? sv ?? _defaultScriptsDir);
+        _scriptsDir = (sv != null && Directory(sv).existsSync())
+            ? sv
+            : (det ?? sv ?? _defaultScriptsDir);
         _pythonPath = (data['pythonPath'] as String?) ?? 'python';
         _spellLevel = (data['spellLevel'] as String?) ?? 'default';
         _spellVariant = (data['spellVariant'] as String?) ?? 'fr-FR';
         _modeGeneration = (data['modeGeneration'] as String?) ?? 'exact';
-        _formatLivre = (data['formatLivre'] as String?) ?? '15,24 x 22,86 cm (6 x 9 po)';
+        _formatLivre =
+            (data['formatLivre'] as String?) ?? '15,24 x 22,86 cm (6 x 9 po)';
         _texteFont = (data['texteFont'] as String?) ?? 'Aptos';
         _titresFont = (data['titresFont'] as String?) ?? 'Cinzel';
         _texteSize = (data['texteSize'] as String?) ?? '11';
         _titresSize = (data['titresSize'] as String?) ?? '14';
         _interligne = (data['interligne'] as String?) ?? '1.0';
-        _engine = PythonEngine(scriptsDir: _scriptsDir, pythonPath: _pythonPath);
+        _engine =
+            PythonEngine(scriptsDir: _scriptsDir, pythonPath: _pythonPath);
       }
     } catch (_) {}
   }
@@ -263,11 +311,17 @@ final TextEditingController _iTitre = TextEditingController();
   void _sauverConfig() {
     try {
       File(_configPath).writeAsStringSync(jsonEncode({
-        'scriptsDir': _scriptsDir, 'pythonPath': _pythonPath, 'spellLevel': _spellLevel,
-        'spellVariant': _spellVariant, 'modeGeneration': _modeGeneration,
+        'scriptsDir': _scriptsDir,
+        'pythonPath': _pythonPath,
+        'spellLevel': _spellLevel,
+        'spellVariant': _spellVariant,
+        'modeGeneration': _modeGeneration,
         'formatLivre': _formatLivre,
-        'texteFont': _texteFont, 'titresFont': _titresFont, 'texteSize': _texteSize,
-        'titresSize': _titresSize, 'interligne': _interligne,
+        'texteFont': _texteFont,
+        'titresFont': _titresFont,
+        'texteSize': _texteSize,
+        'titresSize': _titresSize,
+        'interligne': _interligne,
       }));
     } catch (_) {}
   }
@@ -281,7 +335,9 @@ final TextEditingController _iTitre = TextEditingController();
         final x = jsonDecode(f.readAsStringSync());
         if (x is Map<String, dynamic>) d = x;
       }
-      final style = (d['style'] is Map) ? Map<String, dynamic>.from(d['style'] as Map) : <String, dynamic>{};
+      final style = (d['style'] is Map)
+          ? Map<String, dynamic>.from(d['style'] as Map)
+          : <String, dynamic>{};
       final tt = double.tryParse(_texteSize) ?? 11;
       final tz = double.tryParse(_titresSize) ?? 14;
       style['police_corps'] = _texteFont;
@@ -293,18 +349,20 @@ final TextEditingController _iTitre = TextEditingController();
       style['taille_chapitre_ligne2_pt'] = tz - 1;
       style['taille_sous_chapitre_pt'] = tz - 2;
       style['interligne_corps'] = double.tryParse(_interligne) ?? 1.0;
-      style['format_livre'] = _formatLivre;   // ✅ clé lue par generer_roman.py / generer_pdf_direct.py
+      style['format_livre'] =
+          _formatLivre; // ✅ clé lue par generer_roman.py / generer_pdf_direct.py
       style['format_kdp'] = _formatLivre;
       d['style'] = style;
       d['format_livre'] = _formatLivre;
       f.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(d));
-      _log('🎨 Style & format écrits dans Configuration_roman.json.', kind: LogKind.ok);
+      _log('🎨 Style & format écrits dans Configuration_roman.json.',
+          kind: LogKind.ok);
     } catch (e) {
       _log('⚠️ Écriture du style impossible : $e', kind: LogKind.warn);
     }
   }
 
-    void _chargerChapitres() {
+  void _chargerChapitres() {
     final dir = Directory('$_scriptsDir\\Chapitres');
     if (dir.existsSync()) {
       final liste = <String>[];
@@ -326,27 +384,6 @@ final TextEditingController _iTitre = TextEditingController();
     }
   }
 
-  void _chargerImages() {
-    final dir = Directory('$_scriptsDir\\Images');
-    if (dir.existsSync()) {
-      final liste = <String>[];
-      for (final f in dir.listSync().whereType<File>()) {
-        final nom = f.uri.pathSegments.last;
-        final ext = nom.toLowerCase();
-        if (ext.endsWith('.png') || ext.endsWith('.jpg') ||
-            ext.endsWith('.jpeg') || ext.endsWith('.webp') ||
-            ext.endsWith('.bmp')) {
-          final idx = nom.lastIndexOf('.');
-          liste.add(idx > 0 ? nom.substring(0, idx) : nom);
-        }
-      }
-      liste.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-      setState(() { _images = liste; });
-    }
-  }
-
-
-
   void _chargerInfos() {
     try {
       final f = File(_configRomanPath);
@@ -357,16 +394,33 @@ final TextEditingController _iTitre = TextEditingController();
       _iTitre.text = g('titre complet du roman');
       _iSousTitre.text = g('sous-titre éventuel');
       _iAuteur.text = g("nom de l'auteur (couverture)");
-      _iEditeur.text = (inf['editeur'] ?? inf['Éditeur'] ?? inf['Editeur'] ?? '').toString();
-      _iAutresLivres.text = (inf['autres_livres'] ?? inf['Autres livres du même auteur'] ?? '').toString();
-_iRemerciements.text = (inf['remerciements'] ?? '').toString();
-var _fr = (inf['frontispice'] ?? '').toString(); _iFrontispice = _fr.isEmpty ? null : _fr;
-var _pf = (inf['preface'] ?? '').toString(); _iPreface = _pf.isEmpty ? null : _pf;
-var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : _po;
-      final _sv = inf['sommaire'];
-      _iSommaire = _sv is bool ? _sv : (_sv == null ? true : _sv.toString().toLowerCase() != 'false');
+      _iEditeur.text =
+          (inf['editeur'] ?? inf['Éditeur'] ?? inf['Editeur'] ?? '').toString();
+      _iAutresLivres.text =
+          (inf['autres_livres'] ?? inf['Autres livres du même auteur'] ?? '')
+              .toString();
+      _iRemerciements.text = (inf['remerciements'] ?? '').toString();
+      var fr = (inf['frontispice'] ?? '').toString();
+      _iFrontispice = fr.isEmpty ? null : fr;
+      var pf = (inf['preface'] ?? '').toString();
+      _iPreface = pf.isEmpty ? null : pf;
+      var po = (inf['postface'] ?? '').toString();
+      _iPostface = po.isEmpty ? null : po;
+      final sv = inf['sommaire'];
+      _iSommaire = sv is bool
+          ? sv
+          : (sv == null ? true : sv.toString().toLowerCase() != 'false');
       _iAnnee.text = g('année de publication');
       _iIsbn.text = g('isbn');
+      _iDepotLegal.text =
+          (inf['dépôt légal'] ?? inf['depot_legal'] ?? '').toString();
+      _iCopyright.text =
+          (inf['mention de copyright'] ?? inf['mention_copyright'] ?? '')
+              .toString();
+      _iEdition.text = (inf['édition'] ?? inf['edition'] ?? '').toString();
+      _iSiteWeb.text = (inf['site web'] ?? inf['site_web'] ?? '').toString();
+      _iAvertissement.text =
+          (inf['avertissement'] ?? inf['Avertissement'] ?? '').toString();
       _iDedicace.text = g('dédicace');
       _iEpigraphe.text = g('épigraphe');
     } catch (_) {}
@@ -386,13 +440,22 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
         "nom de l'auteur (couverture)": _iAuteur.text.trim(),
         'année de publication': _iAnnee.text.trim(),
         'isbn': _iIsbn.text.trim(),
+        'dépôt légal': _iDepotLegal.text.trim(),
+        'depot_legal': _iDepotLegal.text.trim(),
+        'mention de copyright': _iCopyright.text.trim(),
+        'mention_copyright': _iCopyright.text.trim(),
+        'édition': _iEdition.text.trim(),
+        'edition': _iEdition.text.trim(),
+        'site web': _iSiteWeb.text.trim(),
+        'site_web': _iSiteWeb.text.trim(),
+        'avertissement': _iAvertissement.text.trim(),
         'editeur': _iEditeur.text,
         'Éditeur': _iEditeur.text,
         'autres_livres': _iAutresLivres.text,
-'remerciements': _iRemerciements.text,
-'frontispice': _iFrontispice ?? '',
-'preface': _iPreface ?? '',
-'postface': _iPostface ?? '',
+        'remerciements': _iRemerciements.text,
+        'frontispice': _iFrontispice ?? '',
+        'preface': _iPreface ?? '',
+        'postface': _iPostface ?? '',
         'Autres livres du même auteur': _iAutresLivres.text,
         'sommaire': _iSommaire,
         'dédicace': _iDedicace.text,
@@ -411,7 +474,8 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
       if (f.existsSync()) {
         final d = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
         final chap = (d['chapitres'] as List?) ?? [];
-        _organisation = chap.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _organisation =
+            chap.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
     } catch (_) {}
   }
@@ -443,7 +507,9 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
   void _monter(int i) {
     if (i <= 0) return;
     setState(() {
-      final t = _organisation[i - 1]; _organisation[i - 1] = _organisation[i]; _organisation[i] = t;
+      final t = _organisation[i - 1];
+      _organisation[i - 1] = _organisation[i];
+      _organisation[i] = t;
     });
     _sauverOrganisation();
   }
@@ -451,31 +517,48 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
   void _descendre(int i) {
     if (i >= _organisation.length - 1) return;
     setState(() {
-      final t = _organisation[i + 1]; _organisation[i + 1] = _organisation[i]; _organisation[i] = t;
+      final t = _organisation[i + 1];
+      _organisation[i + 1] = _organisation[i];
+      _organisation[i] = t;
     });
     _sauverOrganisation();
   }
 
   void _supprimer(int i) {
     final e = _organisation[i];
-    setState(() { _organisation.removeAt(i); });
+    setState(() {
+      _organisation.removeAt(i);
+    });
     _sauverOrganisation();
     _log('🗑 Élément retiré : ${_labelOrg(e)}', kind: LogKind.ok);
   }
 
   Future<String?> _saisirTexte(String titre, String hint) {
     final ctrl = TextEditingController();
-    return showDialog<String>(context: context, builder: (ctx) => AlertDialog(
-      backgroundColor: AntiqueTheme.leatherDark,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      title: Text(titre, style: GoogleFonts.cinzel(color: AntiqueTheme.agedGold, fontSize: 16)),
-      content: TextField(controller: ctrl, autofocus: true,
-        style: const TextStyle(color: Color(0xFFE8EAF6)),
-        decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: Color(0xFF6B7194)))),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Annuler')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: const Text('Ajouter')),
-      ]));
+    return showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+                backgroundColor: AntiqueTheme.leatherDark,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                title: Text(titre,
+                    style: GoogleFonts.cinzel(
+                        color: AntiqueTheme.agedGold, fontSize: 16)),
+                content: TextField(
+                    controller: ctrl,
+                    autofocus: true,
+                    style: const TextStyle(color: Color(0xFFE8EAF6)),
+                    decoration: InputDecoration(
+                        hintText: hint,
+                        hintStyle: const TextStyle(color: Color(0xFF6B7194)))),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Annuler')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(ctx, ctrl.text),
+                      child: const Text('Ajouter')),
+                ]));
   }
 
   Future<void> _ajouterActe() async {
@@ -486,36 +569,42 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
     _log('➕ Acte ajouté : $nom', kind: LogKind.ok);
   }
 
-    Future<void> _ajouterChapitre() async {
+  Future<void> _ajouterChapitre() async {
     _chargerChapitres();
     if (_chapitres.isEmpty) {
-      _log('⚠️ Aucun fichier .md dans le dossier Chapitres.', kind: LogKind.warn);
+      _log('⚠️ Aucun fichier .md dans le dossier Chapitres.',
+          kind: LogKind.warn);
       return;
     }
-    final choix = await showDialog<String>(context: context,
-        builder: (ctx) => _ChoixDialog(titre: 'Choisir un chapitre', items: _chapitres));
+    final choix = await showDialog<String>(
+        context: context,
+        builder: (ctx) =>
+            _ChoixDialog(titre: 'Choisir un chapitre', items: _chapitres));
     if (choix == null || choix.trim().isEmpty) return;
     setState(() => _organisation.add({
-      'type': 'chapitre',
-      'fichier_source': choix.trim(),
-      'chapitre_ligne1': choix.trim(),
-      'titre': choix.trim(),
-    }));
+          'type': 'chapitre',
+          'fichier_source': choix.trim(),
+          'chapitre_ligne1': choix.trim(),
+          'titre': choix.trim(),
+        }));
     _sauverOrganisation();
     _log('➕ Chapitre ajouté : $choix', kind: LogKind.ok);
   }
 
-
-
-    Future<void> _ajouterImage() async {
+  Future<void> _ajouterImage() async {
     final dir = Directory('$_scriptsDir\\Images');
-    if (!dir.existsSync()) { _log('⚠️ Dossier Images introuvable.', kind: LogKind.warn); return; }
+    if (!dir.existsSync()) {
+      _log('⚠️ Dossier Images introuvable.', kind: LogKind.warn);
+      return;
+    }
     final fichiersParNom = <String, String>{};
     for (final f in dir.listSync().whereType<File>()) {
       final nom = f.uri.pathSegments.last;
       final ext = nom.toLowerCase();
-      if (ext.endsWith('.png') || ext.endsWith('.jpg') ||
-          ext.endsWith('.jpeg') || ext.endsWith('.webp') ||
+      if (ext.endsWith('.png') ||
+          ext.endsWith('.jpg') ||
+          ext.endsWith('.jpeg') ||
+          ext.endsWith('.webp') ||
           ext.endsWith('.bmp')) {
         final idx = nom.lastIndexOf('.');
         final nomAffiche = idx > 0 ? nom.substring(0, idx) : nom;
@@ -524,17 +613,20 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
     }
     final items = fichiersParNom.keys.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    if (items.isEmpty) { _log('⚠️ Aucune image dans le dossier Images.', kind: LogKind.warn); return; }
-    final choixAffiche = await showDialog<String>(context: context,
-        builder: (ctx) => _ChoixDialog(titre: 'Choisir une image', items: items));
+    if (items.isEmpty) {
+      _log('⚠️ Aucune image dans le dossier Images.', kind: LogKind.warn);
+      return;
+    }
+    final choixAffiche = await showDialog<String>(
+        context: context,
+        builder: (ctx) =>
+            _ChoixDialog(titre: 'Choisir une image', items: items));
     if (choixAffiche == null || choixAffiche.trim().isEmpty) return;
     final vraiNom = fichiersParNom[choixAffiche] ?? choixAffiche;
     setState(() => _organisation.add({'type': 'image', 'image': vraiNom}));
     _sauverOrganisation();
     _log('➕ Image ajoutée : $choixAffiche', kind: LogKind.ok);
   }
-
-
 
   void _log(String text, {LogKind kind = LogKind.line}) {
     setState(() => _logs.add(LogLine(text, kind)));
@@ -549,20 +641,27 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
   void _ecrireErreurMd(String texte) {
     try {
       final f = File(_journalErreursPath);
-      if (!f.existsSync()) f.writeAsStringSync('# 📥 Journal des erreurs – Danoë Studio\n\n');
+      if (!f.existsSync()) {
+        f.writeAsStringSync('# 📥 Journal des erreurs – Danoë Studio\n\n');
+      }
       final n = DateTime.now();
       String d2(int v) => v.toString().padLeft(2, '0');
-      final ts = '${n.year}-${d2(n.month)}-${d2(n.day)} ${d2(n.hour)}:${d2(n.minute)}:${d2(n.second)}';
+      final ts =
+          '${n.year}-${d2(n.month)}-${d2(n.day)} ${d2(n.hour)}:${d2(n.minute)}:${d2(n.second)}';
       final tache = _tacheCourante.isEmpty ? '—' : _tacheCourante;
       final err = texte.replaceFirst('⚠️', '').trim();
-      f.writeAsStringSync('### $ts\nTâche : $tache\nErreur : $err\n\n', mode: FileMode.append);
+      f.writeAsStringSync('### $ts\nTâche : $tache\nErreur : $err\n\n',
+          mode: FileMode.append);
     } catch (_) {}
   }
 
   void _ouvrirJournal() {
     try {
       final f = File(_journalErreursPath);
-      if (!f.existsSync()) f.writeAsStringSync('# 📥 Journal des erreurs – Danoë Studio\n\nAucune erreur.\n');
+      if (!f.existsSync()) {
+        f.writeAsStringSync(
+            '# 📥 Journal des erreurs – Danoë Studio\n\nAucune erreur.\n');
+      }
       Process.run('explorer', ['/select,', f.path]);
       _log('📥 Journal ouvert.', kind: LogKind.ok);
     } catch (e) {
@@ -572,10 +671,14 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
 
   Color _logColor(LogKind k) {
     switch (k) {
-      case LogKind.ok: return const Color(0xFF9BE0A8);
-      case LogKind.warn: return const Color(0xFFE08585);
-      case LogKind.head: return AntiqueTheme.agedGold;
-      case LogKind.line: return AntiqueTheme.parchment;
+      case LogKind.ok:
+        return const Color(0xFF9BE0A8);
+      case LogKind.warn:
+        return const Color(0xFFE08585);
+      case LogKind.head:
+        return AntiqueTheme.agedGold;
+      case LogKind.line:
+        return AntiqueTheme.parchment;
     }
   }
 
@@ -586,13 +689,20 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
       final i = l.indexOf(':');
       return (i != -1) ? l.substring(i + 1).trim() : null;
     }
+
     setState(() {
-      var x = val('📖'); if (x != null) _statOuvrage = x;
-      x = val('📐'); if (x != null) _statFormat = x;
-      x = val('🔤'); if (x != null) _statMots = x;
-      x = val('📑'); if (x != null) _statPages = x;
-      x = val('📚'); if (x != null) _statChapitres = x;
-      x = val('🖼'); if (x != null) _statIllus = x;
+      var x = val('📖');
+      if (x != null) _statOuvrage = x;
+      x = val('📐');
+      if (x != null) _statFormat = x;
+      x = val('🔤');
+      if (x != null) _statMots = x;
+      x = val('📑');
+      if (x != null) _statPages = x;
+      x = val('📚');
+      if (x != null) _statChapitres = x;
+      x = val('🖼');
+      if (x != null) _statIllus = x;
     });
   }
 
@@ -605,80 +715,125 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
 
   void _trackProgress(String line) {
     final l = line.trim();
-    if (l.startsWith('🧩') || l.startsWith('📋')) { _push(6, 'Configuration'); }
-    else if (l.startsWith('🎨')) { _push(10, 'Style'); }
-    else if (l.startsWith('📏')) { _push(14, 'Marges KDP'); }
-    else if (l.startsWith('📄') && l.contains('blocs')) {
+    if (l.startsWith('🧩') || l.startsWith('📋')) {
+      _push(6, 'Configuration');
+    } else if (l.startsWith('🎨')) {
+      _push(10, 'Style');
+    } else if (l.startsWith('📏')) {
+      _push(14, 'Marges KDP');
+    } else if (l.startsWith('📄') && l.contains('blocs')) {
       _loadedChapters++;
       final t = _chapitres.isEmpty ? 1 : _chapitres.length;
       _push(14 + 31 * (_loadedChapters / t), 'Chargement des chapitres');
+    } else if (l.startsWith('📊 Organisation')) {
+      _push(48, 'Construction');
+    } else if (l.startsWith('🖼')) {
+      _push((_progressTarget + 2).clamp(0, 80).toDouble(), 'Illustrations');
+    } else if (l.startsWith('✅ Document généré')) {
+      _push(85, 'Enregistrement');
+    } else if (l.startsWith('✅ TDM')) {
+      _push(92, 'Table des matières');
+    } else if (l.startsWith('📑 Comptage')) {
+      _push(95, 'Comptage des pages');
+    } else if (l.startsWith('📊 STATISTIQUES')) {
+      _push(100, 'Terminé');
+    } else if (l.startsWith('🖨')) {
+      _push(30, 'Export PDF');
+    } else if (l.startsWith('🖤')) {
+      _push(50, 'Noir & blanc');
+    } else if (l.startsWith('📑 Export HD')) {
+      _push(70, 'Export PDF');
+    } else if (l.startsWith('✅ PDF KDP prêt') || l.startsWith('✅ PDF prêt')) {
+      _push(100, 'Terminé');
+    } else if (l.startsWith('📱')) {
+      _push(30, 'Ebook');
+    } else if (l.startsWith('✅') && l.toLowerCase().contains('epub')) {
+      _push(100, 'Terminé');
     }
-    else if (l.startsWith('📊 Organisation')) { _push(48, 'Construction'); }
-    else if (l.startsWith('🖼')) { _push((_progressTarget + 2).clamp(0, 80).toDouble(), 'Illustrations'); }
-    else if (l.startsWith('✅ Document généré')) { _push(85, 'Enregistrement'); }
-    else if (l.startsWith('✅ TDM')) { _push(92, 'Table des matières'); }
-    else if (l.startsWith('📑 Comptage')) { _push(95, 'Comptage des pages'); }
-    else if (l.startsWith('📊 STATISTIQUES')) { _push(100, 'Terminé'); }
-    else if (l.startsWith('🖨')) { _push(30, 'Export PDF'); }
-    else if (l.startsWith('🖤')) { _push(50, 'Noir & blanc'); }
-    else if (l.startsWith('📑 Export HD')) { _push(70, 'Export PDF'); }
-    else if (l.startsWith('✅ PDF KDP prêt') || l.startsWith('✅ PDF prêt')) { _push(100, 'Terminé'); }
-    else if (l.startsWith('📱')) { _push(30, 'Ebook'); }
-    else if (l.startsWith('✅') && l.toLowerCase().contains('epub')) { _push(100, 'Terminé'); }
   }
 
   Future<void> _run(String label, Future<void> Function() task) async {
     if (_busy) return;
     setState(() {
-      _busy = true; _tacheCourante = label; _progressTarget = 2;
-      _phase = 'Démarrage…'; _loadedChapters = 0;
+      _busy = true;
+      _tacheCourante = label;
+      _progressTarget = 2;
+      _phase = 'Démarrage…';
+      _loadedChapters = 0;
     });
     _log('▶ $label…', kind: LogKind.head);
     _creep?.cancel();
     _creep = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if (_progressTarget < 99) {
-        setState(() { _progressTarget = (_progressTarget + 0.2).clamp(0, 99).toDouble(); });
+      if (mounted && _progressTarget < 99) {
+        setState(() {
+          _progressTarget = (_progressTarget + 0.2).clamp(0, 99).toDouble();
+        });
       }
     });
     try {
       await task();
-      setState(() { _progressTarget = 100; _phase = 'Terminé'; });
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _progressTarget = 100;
+        _phase = 'Terminé';
+      });
       await Future.delayed(const Duration(milliseconds: 700));
     } catch (e) {
-      _log('⚠️ Erreur : $e', kind: LogKind.warn);
-      setState(() => _phase = 'Erreur');
+      if (mounted) {
+        _log('⚠️ Erreur : $e', kind: LogKind.warn);
+        setState(() => _phase = 'Erreur');
+      }
     } finally {
       _creep?.cancel();
-      setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _runPythonScript(
+    String script, {
+    List<String> args = const [],
+    void Function(String line)? onLine,
+  }) async {
+    final exitCode =
+        await _engine.runScript(script, args: args, onLine: onLine);
+    if (exitCode != 0) {
+      throw StateError('Le script Python "$script" a échoué (code $exitCode).');
     }
   }
 
   Future<void> _genererLivre() {
     final rapide = _modeGeneration == 'rapide';
     final args = rapide ? const ['--rapide'] : const <String>[];
-    return _run('Génération du livre (mode ${rapide ? "rapide" : "exact"})',
-        () => _engine.runScript('generer_roman.py', args: args, onLine: _surLigne)
-            .then((_) => _deplacerExports()));
+    return _run(
+        'Génération du livre (mode ${rapide ? "rapide" : "exact"})',
+        () =>
+            _runPythonScript('generer_roman.py', args: args, onLine: _surLigne)
+                .then((_) => _deplacerExports()));
   }
 
-  Future<void> _exportPdf() => _run('Export PDF KDP',
-      () => _engine.runScript('generer_pdf_direct.py', onLine: _surLigne)
+  Future<void> _exportPdf() => _run(
+      'Export PDF KDP',
+      () => _runPythonScript('generer_pdf_direct.py', onLine: _surLigne)
           .then((_) => _deplacerExports()));
 
-  Future<void> _genererEbook() => _run('Génération EPUB',
-      () => _engine.runScript('generer_ebook.py', onLine: _surLigne)
+  Future<void> _genererEbook() => _run(
+      'Génération EPUB',
+      () => _runPythonScript('generer_ebook.py', onLine: _surLigne)
           .then((_) => _deplacerExports()));
 
   Future<void> _resumesIA() => _run('Résumés IA',
-      () => _engine.runScript('IA_Roman.py', onLine: (l) => _log(l)));
+      () => _runPythonScript('IA_Roman.py', onLine: (l) => _log(l)));
 
   void _surLigne(String l) {
+    if (!mounted) return;
     _log(l, kind: l.startsWith('⚠️') ? LogKind.warn : LogKind.line);
     _parseStats(l);
     _trackProgress(l);
   }
-
-    
 
   Future<void> _lireResume() async {
     try {
@@ -686,19 +841,36 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
       Directory? backend;
       for (int i = 0; i < 6; i++) {
         final cand = Directory(path.join(dir.path, 'backend'));
-        if (cand.existsSync() && File(path.join(cand.path, 'generer_roman.py')).existsSync()) { backend = cand; break; }
+        if (cand.existsSync() &&
+            File(path.join(cand.path, 'generer_roman.py')).existsSync()) {
+          backend = cand;
+          break;
+        }
         final parent = dir.parent;
         if (parent.path == dir.path) break;
         dir = parent;
       }
-      if (backend == null) { _afficherMsg('Dossier backend introuvable'); return; }
+      if (backend == null) {
+        _afficherMsg('Dossier backend introuvable');
+        return;
+      }
       final resumePath = path.join(backend.path, 'Résumé.md');
-      if (!File(resumePath).existsSync()) { _afficherMsg('« Résumé.md » introuvable. Générez-le via « Résumés IA » (menu Production).'); return; }
-      if (Platform.isWindows) { await Process.run('cmd', ['/c', 'start', '', resumePath]); }
-      else if (Platform.isMacOS) { await Process.run('open', [resumePath]); }
-      else { await Process.run('xdg-open', [resumePath]); }
-      _log('📝 Ouverture du résumé : ' + resumePath);
-    } catch (e) { _afficherMsg('Erreur ouverture résumé : ' + e.toString()); }
+      if (!File(resumePath).existsSync()) {
+        _afficherMsg(
+            '« Résumé.md » introuvable. Générez-le via « Résumés IA » (menu Production).');
+        return;
+      }
+      if (Platform.isWindows) {
+        await Process.run('cmd', ['/c', 'start', '', resumePath]);
+      } else if (Platform.isMacOS) {
+        await Process.run('open', [resumePath]);
+      } else {
+        await Process.run('xdg-open', [resumePath]);
+      }
+      _log('📝 Ouverture du résumé : $resumePath');
+    } catch (e) {
+      _afficherMsg('Erreur ouverture résumé : $e');
+    }
   }
 
   void _afficherMsg(String msg) {
@@ -706,17 +878,66 @@ var _po = (inf['postface'] ?? '').toString(); _iPostface = _po.isEmpty ? null : 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-Future<void> _lireDocument(String type) async {
+  Future<void> _fermerLivre() async {
+    if (_busy) {
+      _afficherMsg(
+          'Une opération est en cours. Attendez sa fin avant de fermer le livre.');
+      return;
+    }
+    final confirmer = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AntiqueTheme.leatherDark,
+        title: Text('Fermer le livre', style: AntiqueTheme.titlePage),
+        content: const Text(
+          'L’application va se fermer et les caches temporaires seront vidés.',
+          style: TextStyle(color: AntiqueTheme.parchment),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmer != true) return;
+
+    try {
+      final cache = Directory(path.join(_scriptsDir, '_cache_HD'));
+      if (cache.existsSync()) {
+        for (final entry in cache.listSync()) {
+          entry.deleteSync(recursive: true);
+        }
+      }
+    } catch (_) {}
+    exit(0);
+  }
+
+  Future<void> _lireDocument(String type) async {
     final ext = type == 'word' ? '.docx' : (type == 'pdf' ? '.pdf' : '.epub');
     final dirs = [Directory(_exportPath), Directory(_scriptsDir)];
     List<File> fs = [];
     for (final d in dirs) {
       if (!d.existsSync()) continue;
-      final found = d.listSync().whereType<File>()
-          .where((f) => f.path.toLowerCase().endsWith(ext)).toList();
-      if (found.isNotEmpty) { fs = found; break; }
+      final found = d
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.toLowerCase().endsWith(ext))
+          .toList();
+      if (found.isNotEmpty) {
+        fs = found;
+        break;
+      }
     }
-    if (fs.isEmpty) { _log('⚠️ Aucun fichier $ext généré.', kind: LogKind.warn); return; }
+    if (fs.isEmpty) {
+      _log('⚠️ Aucun fichier $ext généré.', kind: LogKind.warn);
+      return;
+    }
     fs.sort((a, b) => b.statSync().modified.compareTo(a.statSync().modified));
     _log('📖 Ouverture : ${fs.first.uri.pathSegments.last}', kind: LogKind.ok);
     try {
@@ -740,19 +961,31 @@ Future<void> _lireDocument(String type) async {
   Future<void> _ouvrirParametres() async {
     final res = await showDialog<_AppSettings>(
       context: context,
-      builder: (ctx) => _SettingsDialog(initial: _AppSettings(
-        scriptsDir: _scriptsDir, pythonPath: _pythonPath, spellLevel: _spellLevel,
-        spellVariant: _spellVariant, formatLivre: _formatLivre,
-        texteFont: _texteFont, titresFont: _titresFont,
-        texteSize: _texteSize, titresSize: _titresSize, interligne: _interligne)),
+      builder: (ctx) => _SettingsDialog(
+          initial: _AppSettings(
+              scriptsDir: _scriptsDir,
+              pythonPath: _pythonPath,
+              spellLevel: _spellLevel,
+              spellVariant: _spellVariant,
+              formatLivre: _formatLivre,
+              texteFont: _texteFont,
+              titresFont: _titresFont,
+              texteSize: _texteSize,
+              titresSize: _titresSize,
+              interligne: _interligne)),
     );
     if (res == null) return;
     setState(() {
-      _scriptsDir = res.scriptsDir; _pythonPath = res.pythonPath;
-      _spellLevel = res.spellLevel; _spellVariant = res.spellVariant;
+      _scriptsDir = res.scriptsDir;
+      _pythonPath = res.pythonPath;
+      _spellLevel = res.spellLevel;
+      _spellVariant = res.spellVariant;
       _formatLivre = res.formatLivre;
-      _texteFont = res.texteFont; _titresFont = res.titresFont;
-      _texteSize = res.texteSize; _titresSize = res.titresSize; _interligne = res.interligne;
+      _texteFont = res.texteFont;
+      _titresFont = res.titresFont;
+      _texteSize = res.texteSize;
+      _titresSize = res.titresSize;
+      _interligne = res.interligne;
       _engine = PythonEngine(scriptsDir: _scriptsDir, pythonPath: _pythonPath);
     });
     _sauverConfig();
@@ -763,42 +996,57 @@ Future<void> _lireDocument(String type) async {
   }
 
   Future<void> _corriger() => _run('Vérification orthographique', () async {
-    if (_chapitre == null) { _log('⚠️ Sélectionnez un chapitre.', kind: LogKind.warn); return; }
-    final _chapitreFichier = _chapitre!.toLowerCase().endsWith('.md') ? _chapitre! : '$_chapitre.md';
-    final file = File('$_scriptsDir\\Chapitres\\$_chapitreFichier');
-    final texte = await file.readAsString();
-    _log('🔍 Analyse de « $_chapitre »…', kind: LogKind.head);
-    final ms = await _spell.checkText(texte, level: _spellLevel, variant: _spellVariant,
-        onProgress: (f) => _push(10 + 45 * f, 'Analyse LanguageTool'));
-    if (ms.isEmpty) { _log('✅ Aucune erreur détectée.', kind: LogKind.ok); return; }
-    _log('⚠️ ${ms.length} anomalie(s) détectée(s).', kind: LogKind.warn);
-    var tf = texte; var nb = 0; var ignorer = false;
-    final tri = [...ms]..sort((a, b) => b.offset.compareTo(a.offset));
-    var i = 0;
-    for (final m in tri) {
-      i++;
-      if (ignorer) break;
-      _push(60 + 35 * (i / tri.length), 'Correction $i/${tri.length}');
-      final err = tf.substring(m.offset, m.offset + m.length);
-      _log('  → « $err » : ${m.message}');
-      if (!mounted) return;
-      final res = await showDialog<_ResultCorrection>(
-          context: context, builder: (ctx) => _CorrectionDialog(match: m));
-      if (res == null) continue;
-      if (res.ignoreAll) { ignorer = true; continue; }
-      if (res.valeur != null && res.valeur!.isNotEmpty) {
-        tf = tf.replaceRange(m.offset, m.offset + m.length, res.valeur!);
-        nb++;
-      }
-    }
-    if (nb > 0) {
-      _push(97, 'Sauvegarde');
-      await file.writeAsString(tf);
-      _log('💾 $nb correction(s) appliquée(s).', kind: LogKind.ok);
-    } else {
-      _log('ℹ️ Aucune modification appliquée.');
-    }
-  });
+        if (_chapitre == null) {
+          _log('⚠️ Sélectionnez un chapitre.', kind: LogKind.warn);
+          return;
+        }
+        final chapitreFichier = _chapitre!.toLowerCase().endsWith('.md')
+            ? _chapitre!
+            : '$_chapitre.md';
+        final file = File('$_scriptsDir\\Chapitres\\$chapitreFichier');
+        final texte = await file.readAsString();
+        _log('🔍 Analyse de « $_chapitre »…', kind: LogKind.head);
+        final ms = await _spell.checkText(texte,
+            level: _spellLevel,
+            variant: _spellVariant,
+            onProgress: (f) => _push(10 + 45 * f, 'Analyse LanguageTool'));
+        if (ms.isEmpty) {
+          _log('✅ Aucune erreur détectée.', kind: LogKind.ok);
+          return;
+        }
+        _log('⚠️ ${ms.length} anomalie(s) détectée(s).', kind: LogKind.warn);
+        var tf = texte;
+        var nb = 0;
+        var ignorer = false;
+        final tri = [...ms]..sort((a, b) => b.offset.compareTo(a.offset));
+        var i = 0;
+        for (final m in tri) {
+          i++;
+          if (ignorer) break;
+          _push(60 + 35 * (i / tri.length), 'Correction $i/${tri.length}');
+          final err = tf.substring(m.offset, m.offset + m.length);
+          _log('  → « $err » : ${m.message}');
+          if (!mounted) return;
+          final res = await showDialog<_ResultCorrection>(
+              context: context, builder: (ctx) => _CorrectionDialog(match: m));
+          if (res == null) continue;
+          if (res.ignoreAll) {
+            ignorer = true;
+            continue;
+          }
+          if (res.valeur != null && res.valeur!.isNotEmpty) {
+            tf = tf.replaceRange(m.offset, m.offset + m.length, res.valeur!);
+            nb++;
+          }
+        }
+        if (nb > 0) {
+          _push(97, 'Sauvegarde');
+          await file.writeAsString(tf);
+          _log('💾 $nb correction(s) appliquée(s).', kind: LogKind.ok);
+        } else {
+          _log('ℹ️ Aucune modification appliquée.');
+        }
+      });
 
   // ══════════════════════════════════════════════════════════════
   //  INTERFACE
@@ -809,7 +1057,7 @@ Future<void> _lireDocument(String type) async {
       backgroundColor: AntiqueTheme.inkBlack,
       body: Focus(
         autofocus: true,
-        onKey: _onKey,
+        onKeyEvent: _onKey,
         child: Stack(children: [
           Row(children: [Expanded(child: _mainArea())]),
           const Positioned.fill(child: Ambiance()),
@@ -819,31 +1067,51 @@ Future<void> _lireDocument(String type) async {
   }
 
   Widget _mainArea() {
-    return Padding(padding: const EdgeInsets.all(16),
-      child: Column(children: [
-        const SizedBox(height: 4),
-        Opacity(opacity: _busy ? 1.0 : 0.0,
-          child: Padding(padding: const EdgeInsets.only(bottom: 8),
-            child: _ProgressIndicator(target: _progressTarget, phase: _phase))),
-        Opacity(opacity: _busy ? 1.0 : 0.0,
-          child: Padding(padding: const EdgeInsets.only(bottom: 8),
-            child: K2000Scanner(active: _busy, height: 24))),
-        Expanded(flex: 6, child: RepaintBoundary(child: _livre())),
-        const SizedBox(height: 10),
-        Expanded(flex: 4, child: RepaintBoundary(child: _console())),
-      ]));
+    return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(children: [
+          const SizedBox(height: 4),
+          Opacity(
+              opacity: _busy ? 1.0 : 0.0,
+              child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _ProgressIndicator(
+                      target: _progressTarget, phase: _phase, active: _busy))),
+          Expanded(flex: 6, child: RepaintBoundary(child: _livre())),
+          const SizedBox(height: 10),
+          Expanded(flex: 4, child: RepaintBoundary(child: _console())),
+        ]));
   }
 
   static const List<String> _rubanLabels = [
-    'Réglages', 'Informations', 'Organisation', 'Correction',
-    'Production', 'Lecture', 'Registre', 'Contact',
+    'Réglages',
+    'Informations',
+    'Organisation',
+    'Correction',
+    'Production',
+    'Lecture',
+    'Registre',
+    'Contact',
   ];
   static const List<String> _rubanEmojis = [
-    '⚙', '📜', '', '', '▶', '📖', '', '🌐',
+    '⚙',
+    '📜',
+    '',
+    '',
+    '▶',
+    '📖',
+    '',
+    '🌐',
   ];
   static const List<Color> _rubanCouleurs = [
-    Color(0xFFB8860B), Color(0xFF7A4A22), Color(0xFF4E8577), Color(0xFF6B3FA0),
-    Color(0xFF8E2A2A), Color(0xFF2E4E7E), Color(0xFF2F6B3A), Color(0xFF6B5A8E),
+    Color(0xFFB8860B),
+    Color(0xFF7A4A22),
+    Color(0xFF4E8577),
+    Color(0xFF6B3FA0),
+    Color(0xFF8E2A2A),
+    Color(0xFF2E4E7E),
+    Color(0xFF2F6B3A),
+    Color(0xFF6B5A8E),
   ];
 
   Widget _livre() {
@@ -853,27 +1121,58 @@ Future<void> _lireDocument(String type) async {
       const pad = 16.0;
       final pageW = (bw - pad * 2 - 14) / 2;
       final pageH = bh - pad * 2;
-      return SizedBox(width: bw, height: bh, child: Stack(clipBehavior: Clip.none, children: [
-        Positioned.fill(child: Container(decoration: BoxDecoration(
-          gradient: AntiqueTheme.leatherGradient,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF2A180C), width: 2),
-          boxShadow: [BoxShadow(color: Color(0x99000000), blurRadius: 18, offset: const Offset(0, 8))]))),
-        Positioned(left: pad, top: pad, width: pageW, height: pageH,
-            child: _parchemin(child: _pageTitre())),
-        Positioned(left: bw / 2 + 8, top: pad, width: pageW, height: pageH,
-            child: _parchemin(child: _pageContenu(_turning ? _cible : _page))),
-        if (_turning)
-          Positioned(left: bw / 2 + 8, top: pad, width: pageW, height: pageH,
-              child: _feuilleTourne()),
-        Positioned(left: 6, top: 20, child: Column(children: [
-          for (var i = 0; i < _rubanLabels.length; i++) ...[
-            RibbonTab(label: _rubanLabels[i], emoji: _rubanEmojis[i], color: _rubanCouleurs[i],
-                active: i == _page, onTap: () => _allerA(i)),
-            const SizedBox(height: 12),
-          ],
-        ])),
-      ]));
+      return SizedBox(
+          width: bw,
+          height: bh,
+          child: Stack(clipBehavior: Clip.none, children: [
+            Positioned.fill(
+                child: Container(
+                    decoration: BoxDecoration(
+                        gradient: AntiqueTheme.leatherGradient,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                            color: const Color(0xFF2A180C), width: 2),
+                        boxShadow: [
+                  BoxShadow(
+                      color: Color(0x99000000),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8))
+                ]))),
+            Positioned(
+                left: pad,
+                top: pad,
+                width: pageW,
+                height: pageH,
+                child: _parchemin(child: _pageTitre())),
+            Positioned(
+                left: bw / 2 + 8,
+                top: pad,
+                width: pageW,
+                height: pageH,
+                child:
+                    _parchemin(child: _pageContenu(_turning ? _cible : _page))),
+            if (_turning)
+              Positioned(
+                  left: bw / 2 + 8,
+                  top: pad,
+                  width: pageW,
+                  height: pageH,
+                  child: _feuilleTourne()),
+            Positioned(
+                left: 6,
+                top: 20,
+                child: Column(children: [
+                  for (var i = 0; i < _rubanLabels.length; i++) ...[
+                    RibbonTab(
+                        label: _rubanLabels[i],
+                        emoji: _rubanEmojis[i],
+                        color: _rubanCouleurs[i],
+                        active: i == _page,
+                        onTap: () => _allerA(i)),
+                    const SizedBox(height: 12),
+                  ],
+                ])),
+          ]));
     });
   }
 
@@ -892,90 +1191,71 @@ Future<void> _lireDocument(String type) async {
   }
 
   Widget _pageTitre() {
-    return SizedBox.expand(child: Stack(children: [
+    return SizedBox.expand(
+        child: Stack(children: [
       FiligreeWatermark(),
-      Positioned.fill(child: Padding(
+      Positioned.fill(
+          child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 18, 14),
         child: LayoutBuilder(builder: (context, constraints) {
           final showLettrine = constraints.maxHeight >= 380;
           return Column(children: [
             const Spacer(flex: 2),
-            FittedBox(fit: BoxFit.scaleDown,
-              child: Text('DANOË STUDIO', textAlign: TextAlign.center,
-                style: AntiqueTheme.displayLarge)),
+            FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('DANOË STUDIO',
+                    textAlign: TextAlign.center,
+                    style: AntiqueTheme.displayLarge)),
             const SizedBox(height: 10),
-            Container(width: 140, height: 2,
-              decoration: const BoxDecoration(gradient: AntiqueTheme.goldGradient)),
+            Container(
+                width: 140,
+                height: 2,
+                decoration:
+                    const BoxDecoration(gradient: AntiqueTheme.goldGradient)),
             const SizedBox(height: 10),
-            Text('— Machine à romans —', textAlign: TextAlign.center,
-              style: AntiqueTheme.titlePage),
+            Text('— Machine à romans —',
+                textAlign: TextAlign.center, style: AntiqueTheme.titlePage),
             if (showLettrine) ...[
               const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28),
-                child: Lettrine(letter: 'D',
+                child: Lettrine(
+                    letter: 'D',
                     paragraph: "ans un atelier où l'encre rencontre le cuir, "
                         "chaque page attend son histoire."),
               ),
             ],
             const SizedBox(height: 18),
-            Text('❦', style: TextStyle(fontSize: 28, color: AntiqueTheme.agedGold)),
+            Text('❦',
+                style: TextStyle(fontSize: 28, color: AntiqueTheme.agedGold)),
             const SizedBox(height: 18),
-            FittedBox(fit: BoxFit.scaleDown,
-              child: Text(_statOuvrage, textAlign: TextAlign.center,
-                style: AntiqueTheme.titlePage.copyWith(fontSize: 16, fontWeight: FontWeight.w700))),
+            FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(_statOuvrage,
+                    textAlign: TextAlign.center,
+                    style: AntiqueTheme.titlePage
+                        .copyWith(fontSize: 16, fontWeight: FontWeight.w700))),
             const Spacer(flex: 3),
             Text('Ex libris', style: AntiqueTheme.caption),
             const SizedBox(height: 6),
           ]);
         }),
       )),
+      Positioned(
+          left: 54,
+          right: 54,
+          bottom: 28,
+          height: 38,
+          child: AntiqueButton(
+              label: 'Fermer le livre',
+              emoji: '✒',
+              compact: true,
+              onParchment: true,
+              onTap: _fermerLivre)),
     ]));
   }
 
-      String _valeurRegistre(String cle) {
-    Directory? backend;
-    Directory dir = Directory.current;
-    for (int i = 0; i < 6; i++) {
-      final cand = Directory(path.join(dir.path, 'backend'));
-      if (cand.existsSync() && File(path.join(cand.path, 'generer_roman.py')).existsSync()) { backend = cand; break; }
-      final parent = dir.parent;
-      if (parent.path == dir.path) break;
-      dir = parent;
-    }
-    final cands = <String>[];
-    if (backend != null) {
-      cands.add(path.join(backend.path, 'registre.json'));
-      cands.add(path.join(backend.path, 'export', 'registre.json'));
-      cands.add(path.join(backend.path, 'statistiques.json'));
-      cands.add(path.join(backend.path, 'export', 'statistiques.json'));
-    }
-    cands.add('registre.json');
-    for (final c in cands) {
-      try {
-        final f = File(c);
-        if (!f.existsSync()) continue;
-        final d = jsonDecode(f.readAsStringSync());
-        if (d is Map) {
-          for (final k in d.keys) {
-            if (k.toString().trim() == cle) {
-              final v = d[k].toString().trim();
-              if (v.isNotEmpty) return v;
-            }
-          }
-        }
-      } catch (_) {}
-    }
-    return '—';
-  }
-
-
-
-
-
-
-
-    String _statOuvrage = '—';
+  String _statOuvrage = '—';
   String _statFormat = '—';
   String _statMots = '—';
   String _statPages = '—';
@@ -993,35 +1273,56 @@ Future<void> _lireDocument(String type) async {
         _ligneRegistre('Chapitres', _statChapitres),
         _ligneRegistre('Illustr.', _statIllus),
         const SizedBox(height: 8),
-        const Center(child: Text('❦', style: TextStyle(fontSize: 24, color: AntiqueTheme.brass))),
+        const Center(
+            child: Text('❦',
+                style: TextStyle(fontSize: 24, color: AntiqueTheme.brass))),
       ]),
     );
   }
 
-Widget _ligneRegistre(String k, String v) {
-    return Padding(padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(children: [
-        Text(k, style: GoogleFonts.cinzel(fontSize: 12, fontWeight: FontWeight.w700,
-            color: AntiqueTheme.bloodInk, letterSpacing: 1)),
-        const SizedBox(width: 8),
-        Expanded(child: Container(height: 1, color: AntiqueTheme.brass.withOpacity(0.4))),
-        const SizedBox(width: 8),
-        Flexible(child: Text(v, overflow: TextOverflow.ellipsis,
-            style: AntiqueTheme.bodyText.copyWith(fontSize: 15, fontWeight: FontWeight.w600))),
-      ]));
+  Widget _ligneRegistre(String k, String v) {
+    return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(children: [
+          Text(k,
+              style: GoogleFonts.cinzel(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AntiqueTheme.bloodInk,
+                  letterSpacing: 1)),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Container(
+                  height: 1, color: AntiqueTheme.brass.withValues(alpha: 0.4))),
+          const SizedBox(width: 8),
+          Flexible(
+              child: Text(v,
+                  overflow: TextOverflow.ellipsis,
+                  style: AntiqueTheme.bodyText
+                      .copyWith(fontSize: 15, fontWeight: FontWeight.w600))),
+        ]));
   }
 
   Widget _pageContenu(int i) {
     switch (i) {
-      case 0: return _pageReglages();
-      case 1: return _pageInfos();
-      case 2: return _pageOrganisation();
-      case 3: return _pageCorrection();
-      case 4: return _pageProduction();
-      case 5: return _pageLecture();
-      case 6: return _pageRegistre();
-      case 7: return _pageContact();
-      default: return _pageReglages();
+      case 0:
+        return _pageReglages();
+      case 1:
+        return _pageInfos();
+      case 2:
+        return _pageOrganisation();
+      case 3:
+        return _pageCorrection(); // Uncommented to enable correction page
+      case 4:
+        return _pageProduction();
+      case 5:
+        return _pageLecture();
+      case 6:
+        return _pageRegistre();
+      case 7:
+        return _pageContact();
+      default:
+        return _pageReglages();
     }
   }
 
@@ -1030,7 +1331,7 @@ Widget _ligneRegistre(String k, String v) {
   }
 
   // ══ 0. RÉGLAGES ══
-    Widget _pageReglages() {
+  Widget _pageReglages() {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1038,44 +1339,47 @@ Widget _ligneRegistre(String k, String v) {
         _actionPage('⚙', 'Paramètres', _ouvrirParametres),
         _actionPage('📤', 'Dossier export', () => _ouvrirDossier('export')),
         _actionPage('🖼', 'Dossier des images', () => _ouvrirDossier('Images')),
-        _actionPage('📁', 'Dossier des chapitres', () => _ouvrirDossier('Chapitres')),
-        _actionPage('🌐', 'Dossier traductions', () => _ouvrirDossier('Traductions')),
+        _actionPage(
+            '📁', 'Dossier des chapitres', () => _ouvrirDossier('Chapitres')),
+        _actionPage(
+            '🌐', 'Dossier traductions', () => _ouvrirDossier('Traductions')),
         _actionPage('📥', 'Journal des erreurs', _ouvrirJournal),
       ]),
     );
   }
 
-  // ══ 1. INFORMATIONS ══
-        Widget _boutonRond(String label, String emoji, VoidCallback onTap) {
+  Widget _boutonLivre(String emoji, String label, VoidCallback onTap) {
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      Material(color: Colors.transparent,
-        child: InkWell(borderRadius: BorderRadius.circular(28), onTap: onTap,
-          child: Container(width: 52, height: 52,
-            decoration: BoxDecoration(shape: BoxShape.circle,
+      Material(
+          color: Colors.transparent,
+          child: InkWell(
+              borderRadius: BorderRadius.circular(30),
+              onTap: onTap,
+              child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const RadialGradient(
+                          colors: [Color(0xFFf6efdd), Color(0xFFe2d3ae)]),
+                      border: Border.all(color: AntiqueTheme.brass, width: 2),
+                      boxShadow: const [
+                        BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 3,
+                            offset: Offset(1, 2))
+                      ]),
+                  child: Center(
+                      child:
+                          Text(emoji, style: const TextStyle(fontSize: 21)))))),
+      const SizedBox(height: 4),
+      Text(label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.cinzel(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
               color: AntiqueTheme.bloodInk,
-              border: Border.all(color: AntiqueTheme.brass, width: 1.5)),
-            child: Center(child: Text(emoji, style: const TextStyle(fontSize: 20)))))),
-      const SizedBox(height: 4),
-      Text(label, textAlign: TextAlign.center,
-        style: GoogleFonts.cinzel(fontSize: 9, fontWeight: FontWeight.w700,
-            color: AntiqueTheme.bloodInk, letterSpacing: 0.5)),
-    ]);
-  }
-
-    Widget _boutonLivre(String emoji, String label, VoidCallback onTap) {
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      Material(color: Colors.transparent, child: InkWell(
-        borderRadius: BorderRadius.circular(30), onTap: onTap,
-        child: Container(width: 56, height: 56,
-          decoration: BoxDecoration(shape: BoxShape.circle,
-            gradient: const RadialGradient(colors: [Color(0xFFf6efdd), Color(0xFFe2d3ae)]),
-            border: Border.all(color: AntiqueTheme.brass, width: 2),
-            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 3, offset: Offset(1, 2))]),
-          child: Center(child: Text(emoji, style: const TextStyle(fontSize: 21)))))),
-      const SizedBox(height: 4),
-      Text(label, textAlign: TextAlign.center, style: GoogleFonts.cinzel(
-          fontSize: 9, fontWeight: FontWeight.w700,
-          color: AntiqueTheme.bloodInk, letterSpacing: 0.5)),
+              letterSpacing: 0.5)),
     ]);
   }
 
@@ -1085,80 +1389,112 @@ Widget _ligneRegistre(String k, String v) {
       children.add(boutons[i]);
       if (i < boutons.length - 1) children.add(const SizedBox(width: 16));
     }
-    return Padding(padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: children));
+    return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+            mainAxisAlignment: MainAxisAlignment.center, children: children));
   }
 
   Widget _pageInfos() {
-    return Padding(padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _titrePage('INFORMATIONS'),
-        Expanded(child: SingleChildScrollView(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (_infosPage == 1) ...[
-            _champInfo('Titre complet du roman', _iTitre),
-            _champInfo('Sous-titre éventuel', _iSousTitre),
-            _champInfo("Nom de l'auteur (couverture)", _iAuteur),
-            Row(children: [
-              Expanded(child: _champInfo('Année de publication', _iAnnee)),
-              const SizedBox(width: 12),
-              Expanded(child: _champInfo('ISBN', _iIsbn)),
-            ]),
-            _champInfo('Dédicace', _iDedicace, lines: 2),
-            _champInfo('Épigraphe', _iEpigraphe, lines: 2),
-            _caseSommaire(),
-            const SizedBox(height: 12),
-            
-          ] else ...[
-            _champInfo('Éditeur', _iEditeur),
-            _champInfo('Autres livres du même auteur', _iAutresLivres, lines: 5),
-            _champInfo('Remerciements', _iRemerciements, lines: 4),
-            _champDropdownImages('Frontispice', _iFrontispice),
-            _champDropdownChapitres('Préface', _iPreface),
-            _champDropdownChapitres('Postface', _iPostface),
-            const SizedBox(height: 12),
-            _ligneBoutonsLivre([_boutonLivre('←', 'Page 1', () => setState(() => _infosPage = 1)), _boutonLivre('💾', 'Enregistrer', _sauverInfos)]),
-          ],
-          const SizedBox(height: 8),
-          _ligneBoutonsLivre([_boutonLivre('💾', 'Enregistrer', _sauverInfos), _boutonLivre('→', 'Page 2', () => setState(() => _infosPage = 2))]),
-          const SizedBox(height: 8),
-        ]))),
-      ]));
+    return Padding(
+        padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _titrePage('INFORMATIONS'),
+          Expanded(
+              child: SingleChildScrollView(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                if (_infosPage == 1) ...[
+                  _champInfo('Titre complet du roman', _iTitre),
+                  _champInfo('Sous-titre éventuel', _iSousTitre),
+                  _champInfo("Nom de l'auteur (couverture)", _iAuteur),
+                  Row(children: [
+                    Expanded(
+                        child: _champInfo('Année de publication', _iAnnee)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _champInfo('ISBN', _iIsbn)),
+                  ]),
+                  _champInfo('Dépôt légal', _iDepotLegal),
+                  _champInfo('Mention de copyright', _iCopyright),
+                  _champInfo('Édition', _iEdition),
+                  _champInfo('Site web', _iSiteWeb),
+                  _champInfo('Avertissement', _iAvertissement, lines: 3),
+                  _champInfo('Dédicace', _iDedicace, lines: 2),
+                  _caseSommaire(),
+                  const SizedBox(height: 12),
+                ] else ...[
+                  _champInfo('Éditeur', _iEditeur),
+                  _champInfo('Autres livres du même auteur', _iAutresLivres,
+                      lines: 5),
+                  _champInfo('Remerciements', _iRemerciements, lines: 4),
+                  _champInfo('Épigraphe', _iEpigraphe, lines: 2),
+                  _champDropdownImages('Frontispice', _iFrontispice),
+                  _champDropdownChapitres('Préface', _iPreface),
+                  _champDropdownChapitres('Postface', _iPostface),
+                  const SizedBox(height: 12),
+                  _ligneBoutonsLivre([
+                    _boutonLivre(
+                        '←', 'Page 1', () => setState(() => _infosPage = 1)),
+                  ]),
+                ],
+                const SizedBox(height: 8),
+                _ligneBoutonsLivre([
+                  _boutonLivre('💾', 'Enregistrer', _sauverInfos),
+                  _boutonLivre(
+                      '→', 'Page 2', () => setState(() => _infosPage = 2))
+                ]),
+                const SizedBox(height: 8),
+              ]))),
+        ]));
   }
 
   Widget _caseSommaire() {
-    return Padding(padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(children: [
-        SizedBox(width: 24, height: 24,
-          child: Checkbox(value: _iSommaire,
-            checkColor: AntiqueTheme.parchment,
-            activeColor: AntiqueTheme.bloodInk,
-            side: const BorderSide(color: AntiqueTheme.brass),
-            onChanged: (v) => setState(() => _iSommaire = v ?? true))),
-        const SizedBox(width: 10),
-        Expanded(child: Text('Sommaire (table des matières dans le livre)',
-            style: GoogleFonts.cinzel(fontSize: 12, fontWeight: FontWeight.w700,
-                color: AntiqueTheme.bloodInk, letterSpacing: 1))),
-      ]));
+    return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(children: [
+          SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                  value: _iSommaire,
+                  checkColor: AntiqueTheme.parchment,
+                  activeColor: AntiqueTheme.bloodInk,
+                  side: const BorderSide(color: AntiqueTheme.brass),
+                  onChanged: (v) => setState(() => _iSommaire = v ?? true))),
+          const SizedBox(width: 10),
+          Expanded(
+              child: Text('Sommaire (table des matières dans le livre)',
+                  style: GoogleFonts.cinzel(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AntiqueTheme.bloodInk,
+                      letterSpacing: 1))),
+        ]));
   }
 
-
-
-
-
   Widget _champInfo(String label, TextEditingController ctrl, {int lines = 1}) {
-    return Padding(padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: GoogleFonts.cinzel(fontSize: 12, fontWeight: FontWeight.w700,
-            color: AntiqueTheme.bloodInk, letterSpacing: 1)),
-        TextField(controller: ctrl, maxLines: lines,
-          style: AntiqueTheme.bodyText.copyWith(fontSize: 14),
-          decoration: const InputDecoration(
-            isDense: true,
-            contentPadding: EdgeInsets.symmetric(vertical: 6),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AntiqueTheme.brass)),
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AntiqueTheme.bloodInk)))),
-      ]));
+    return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label,
+              style: GoogleFonts.cinzel(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AntiqueTheme.bloodInk,
+                  letterSpacing: 1)),
+          TextField(
+              controller: ctrl,
+              maxLines: lines,
+              style: AntiqueTheme.bodyText.copyWith(fontSize: 14),
+              decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 6),
+                  enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AntiqueTheme.brass)),
+                  focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: AntiqueTheme.bloodInk)))),
+        ]));
   }
 
   // ══ 2. ORGANISATION ══
@@ -1169,15 +1505,23 @@ Widget _ligneRegistre(String k, String v) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: GoogleFonts.cinzel(fontSize: 12, fontWeight: FontWeight.w700,
-            color: AntiqueTheme.bloodInk, letterSpacing: 1)),
+        Text(label,
+            style: GoogleFonts.cinzel(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AntiqueTheme.bloodInk,
+                letterSpacing: 1)),
         DropdownButton<String>(
           value: ok ? value : null,
           isExpanded: true,
           hint: Text('— aucun —',
-              style: TextStyle(color: AntiqueTheme.brass.withOpacity(0.5))),
-          items: [for (final img in images)
-            DropdownMenuItem<String>(value: img, child: Text(img, overflow: TextOverflow.ellipsis))],
+              style:
+                  TextStyle(color: AntiqueTheme.brass.withValues(alpha: 0.5))),
+          items: [
+            for (final img in images)
+              DropdownMenuItem<String>(
+                  value: img, child: Text(img, overflow: TextOverflow.ellipsis))
+          ],
           onChanged: (v) => setState(() {
             if (label == 'Frontispice') _iFrontispice = v;
           }),
@@ -1195,15 +1539,23 @@ Widget _ligneRegistre(String k, String v) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: GoogleFonts.cinzel(fontSize: 12, fontWeight: FontWeight.w700,
-            color: AntiqueTheme.bloodInk, letterSpacing: 1)),
+        Text(label,
+            style: GoogleFonts.cinzel(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AntiqueTheme.bloodInk,
+                letterSpacing: 1)),
         DropdownButton<String>(
           value: ok ? value : null,
           isExpanded: true,
           hint: Text('— aucun —',
-              style: TextStyle(color: AntiqueTheme.brass.withOpacity(0.5))),
-          items: [for (final c in chapitres)
-            DropdownMenuItem<String>(value: c, child: Text(c, overflow: TextOverflow.ellipsis))],
+              style:
+                  TextStyle(color: AntiqueTheme.brass.withValues(alpha: 0.5))),
+          items: [
+            for (final c in chapitres)
+              DropdownMenuItem<String>(
+                  value: c, child: Text(c, overflow: TextOverflow.ellipsis))
+          ],
           onChanged: (v) => setState(() {
             if (label == 'Préface') _iPreface = v;
             if (label == 'Postface') _iPostface = v;
@@ -1223,8 +1575,11 @@ Widget _ligneRegistre(String k, String v) {
     for (final f in dir.listSync().whereType<File>()) {
       final nom = f.uri.pathSegments.last;
       final e = nom.toLowerCase();
-      if (e.endsWith('.png') || e.endsWith('.jpg') || e.endsWith('.jpeg') ||
-          e.endsWith('.webp') || e.endsWith('.bmp')) {
+      if (e.endsWith('.png') ||
+          e.endsWith('.jpg') ||
+          e.endsWith('.jpeg') ||
+          e.endsWith('.webp') ||
+          e.endsWith('.bmp')) {
         final i = nom.lastIndexOf('.');
         liste.add(i > 0 ? nom.substring(0, i) : nom);
       }
@@ -1248,76 +1603,114 @@ Widget _ligneRegistre(String k, String v) {
   }
 
   Widget _pageOrganisation() {
-    return Padding(padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _titrePage('ORGANISATION'),
-        Row(children: [
-          Text('${_organisation.length} élément(s) — actes, chapitres & images',
-            style: AntiqueTheme.titlePage.copyWith(fontSize: 12)),
-          const Spacer(),
-          InkWell(onTap: () { _chargerChapitres(); _chargerImages(); _chargerOrganisation(); setState(() {});
-              _log('🔄 Chapitres, images et organisation rechargés.', kind: LogKind.ok); },
-            child: Text('🔄 Recharger',
-              style: GoogleFonts.cinzel(fontSize: 12, fontWeight: FontWeight.w700,
-                  color: AntiqueTheme.bloodInk))),
-        ]),
-        const SizedBox(height: 10),
-        Row(children: [
-          Expanded(child: _ajoutBtn('🎭', 'Acte', _ajouterActe)),
-          const SizedBox(width: 8),
-          Expanded(child: _ajoutBtn('📄', 'Chapitre', _ajouterChapitre)),
-          const SizedBox(width: 8),
-          Expanded(child: _ajoutBtn('🖼', 'Image', _ajouterImage)),
-        ]),
-        const SizedBox(height: 10),
-        Expanded(child: ListView.builder(
-          itemCount: _organisation.length,
-          itemBuilder: (c, i) {
-            final e = _organisation[i];
-            final t = (e['type'] ?? '').toString();
-            final icone = t == 'acte' ? '🎭' : (t == 'image' ? '🖼' : '📄');
-            return Container(margin: const EdgeInsets.symmetric(vertical: 3),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              decoration: BoxDecoration(color: const Color(0x0F000000),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AntiqueTheme.brass, width: 1.1)),
-              child: Row(children: [
-                SizedBox(width: 26, child: Text('$i',
-                  style: TextStyle(fontSize: 11, color: AntiqueTheme.brass))),
-                Text(icone, style: const TextStyle(fontSize: 15)),
-                const SizedBox(width: 10),
-                Expanded(child: Text(_labelOrg(e), maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: AntiqueTheme.bodyText.copyWith(fontSize: 13, fontWeight: FontWeight.w700))),
-                _miniBtn('▲', () => _monter(i)),
-                const SizedBox(width: 4),
-                _miniBtn('▼', () => _descendre(i)),
-                const SizedBox(width: 8),
-                _miniBtn('🗑', () => _supprimer(i)),
-              ]));
-          })),
-      ]));
+    return Padding(
+        padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _titrePage('ORGANISATION'),
+          Row(children: [
+            Text(
+                '${_organisation.length} élément(s) — actes, chapitres & images',
+                style: AntiqueTheme.titlePage.copyWith(fontSize: 12)),
+            const Spacer(),
+            InkWell(
+                onTap: () {
+                  _chargerChapitres();
+                  _chargerOrganisation();
+                  setState(() {});
+                  _log('🔄 Chapitres et organisation rechargés.',
+                      kind: LogKind.ok);
+                },
+                child: Text('🔄 Recharger',
+                    style: GoogleFonts.cinzel(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AntiqueTheme.bloodInk))),
+          ]),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: _ajoutBtn('🎭', 'Acte', _ajouterActe)),
+            const SizedBox(width: 8),
+            Expanded(child: _ajoutBtn('📄', 'Chapitre', _ajouterChapitre)),
+            const SizedBox(width: 8),
+            Expanded(child: _ajoutBtn('🖼', 'Image', _ajouterImage)),
+          ]),
+          const SizedBox(height: 10),
+          Expanded(
+              child: ListView.builder(
+                  itemCount: _organisation.length,
+                  itemBuilder: (c, i) {
+                    final e = _organisation[i];
+                    final t = (e['type'] ?? '').toString();
+                    final icone =
+                        t == 'acte' ? '🎭' : (t == 'image' ? '🖼' : '📄');
+                    return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 7),
+                        decoration: BoxDecoration(
+                            color: const Color(0x0F000000),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                                color: AntiqueTheme.brass, width: 1.1)),
+                        child: Row(children: [
+                          SizedBox(
+                              width: 26,
+                              child: Text('$i',
+                                  style: TextStyle(
+                                      fontSize: 11,
+                                      color: AntiqueTheme.brass))),
+                          Text(icone, style: const TextStyle(fontSize: 15)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: Text(_labelOrg(e),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AntiqueTheme.bodyText.copyWith(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700))),
+                          _miniBtn('▲', () => _monter(i)),
+                          const SizedBox(width: 4),
+                          _miniBtn('▼', () => _descendre(i)),
+                          const SizedBox(width: 8),
+                          _miniBtn('🗑', () => _supprimer(i)),
+                        ]));
+                  })),
+        ]));
   }
 
   Widget _miniBtn(String s, VoidCallback onTap) {
-    return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(4),
-      child: Padding(padding: const EdgeInsets.all(5),
-        child: Text(s, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800,
-            color: AntiqueTheme.bloodInk))));
+    return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+            padding: const EdgeInsets.all(5),
+            child: Text(s,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AntiqueTheme.bloodInk))));
   }
 
   Widget _ajoutBtn(String icone, String label, VoidCallback onTap) {
-    return InkWell(onTap: onTap, borderRadius: BorderRadius.circular(6),
-      child: Container(padding: const EdgeInsets.symmetric(vertical: 9),
-        decoration: BoxDecoration(color: const Color(0x142F6B3A),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: AntiqueTheme.verdigris, width: 1.2)),
-        child: Center(child: Text('+ $icone $label',
-          style: GoogleFonts.cinzel(fontSize: 13, fontWeight: FontWeight.w700,
-              color: AntiqueTheme.verdigris)))));
+    return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 9),
+            decoration: BoxDecoration(
+                color: const Color(0x142F6B3A),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AntiqueTheme.verdigris, width: 1.2)),
+            child: Center(
+                child: Text('+ $icone $label',
+                    style: GoogleFonts.cinzel(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AntiqueTheme.verdigris)))));
   }
 
   // ══ 3. CORRECTION ══
-    Widget _pageCorrection() {
+  Widget _pageCorrection() {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1330,7 +1723,7 @@ Widget _ligneRegistre(String k, String v) {
   }
 
   // ══ 4. PRODUCTION ══
-    Widget _pageProduction() {
+  Widget _pageProduction() {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1346,7 +1739,7 @@ Widget _ligneRegistre(String k, String v) {
   }
 
   // ══ 5. LECTURE ══
-    Widget _pageLecture() {
+  Widget _pageLecture() {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1356,8 +1749,10 @@ Widget _ligneRegistre(String k, String v) {
         _actionPage('📚', "Lire l'EPUB", () => _lireDocument('epub')),
         _actionPage('📝', 'Lire le résumé', _lireResume),
         const SizedBox(height: 12),
-        Text('Ouvre le dernier fichier généré (dossier export)\navec l\'application par défaut de Windows.',
-            textAlign: TextAlign.center, style: AntiqueTheme.titlePage.copyWith(fontSize: 12)),
+        Text(
+            'Ouvre le dernier fichier généré (dossier export)\navec l\'application par défaut de Windows.',
+            textAlign: TextAlign.center,
+            style: AntiqueTheme.titlePage.copyWith(fontSize: 12)),
       ]),
     );
   }
@@ -1380,16 +1775,19 @@ Widget _ligneRegistre(String k, String v) {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AntiqueTheme.parchmentMid.withOpacity(0.3),
+              color: AntiqueTheme.parchmentMid.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AntiqueTheme.brass.withOpacity(0.3)),
+              border:
+                  Border.all(color: AntiqueTheme.brass.withValues(alpha: 0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Restons en contact',
-                  style: GoogleFonts.cinzel(fontSize: 18, fontWeight: FontWeight.w600,
-                      color: AntiqueTheme.inkSepia)),
+                    style: GoogleFonts.cinzel(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: AntiqueTheme.inkSepia)),
                 const SizedBox(height: 12),
                 _contactLine('📧', 'Email', 'contact@danoeecrivain.net'),
                 _contactLine('🌐', 'Site web', 'danoeecrivain.net'),
@@ -1408,11 +1806,15 @@ Widget _ligneRegistre(String k, String v) {
         Text(icon, style: const TextStyle(fontSize: 18)),
         const SizedBox(width: 12),
         Text('$label : ',
-          style: GoogleFonts.cinzel(fontSize: 14, fontWeight: FontWeight.w600,
-              color: AntiqueTheme.inkSepia)),
-        Expanded(child: Text(value,
-          style: GoogleFonts.crimsonText(fontSize: 14,
-              color: AntiqueTheme.inkSepia.withOpacity(0.8)))),
+            style: GoogleFonts.cinzel(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AntiqueTheme.inkSepia)),
+        Expanded(
+            child: Text(value,
+                style: GoogleFonts.crimsonText(
+                    fontSize: 14,
+                    color: AntiqueTheme.inkSepia.withValues(alpha: 0.8)))),
       ]),
     );
   }
@@ -1420,77 +1822,297 @@ Widget _ligneRegistre(String k, String v) {
   Widget _actionPage(String icone, String label, VoidCallback onTap) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: AntiqueButton(label: label, emoji: icone, onParchment: true, onTap: onTap),
+      child: AntiqueButton(
+          label: label, emoji: icone, onParchment: true, onTap: onTap),
     );
   }
 
   Widget _modeSelector() {
-    return Padding(padding: const EdgeInsets.only(bottom: 8),
-      child: Row(children: [
-        Expanded(child: _modeChip('exact', '🎯 Exact')),
-        const SizedBox(width: 8),
-        Expanded(child: _modeChip('rapide', '⚡ Rapide')),
-      ]));
+    return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(children: [
+          Expanded(child: _modeChip('exact', '🎯 Exact')),
+          const SizedBox(width: 8),
+          Expanded(child: _modeChip('rapide', '⚡ Rapide')),
+        ]));
   }
 
   Widget _modeChip(String mode, String label) {
     final on = _modeGeneration == mode;
     return GestureDetector(
-      onTap: () { setState(() => _modeGeneration = mode); _sauverConfig(); },
-      child: Container(padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: on ? AntiqueTheme.bloodInk : const Color(0x14000000),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: on ? AntiqueTheme.bloodInk : AntiqueTheme.brass, width: 1.2)),
-        child: Center(child: Text(label,
-            style: GoogleFonts.cinzel(fontSize: 13, fontWeight: FontWeight.w700,
-                color: on ? AntiqueTheme.parchment : AntiqueTheme.inkSepia)))));
+        onTap: () {
+          setState(() => _modeGeneration = mode);
+          _sauverConfig();
+        },
+        child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+                color: on ? AntiqueTheme.bloodInk : const Color(0x14000000),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: on ? AntiqueTheme.bloodInk : AntiqueTheme.brass,
+                    width: 1.2)),
+            child: Center(
+                child: Text(label,
+                    style: GoogleFonts.cinzel(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: on
+                            ? AntiqueTheme.parchment
+                            : AntiqueTheme.inkSepia)))));
   }
 
   Widget _chapitrePicker() {
-    return Container(margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(color: const Color(0x14000000), borderRadius: BorderRadius.circular(8)),
-      child: DropdownButtonHideUnderline(child: DropdownButton<String>(
-        isExpanded: true, dropdownColor: AntiqueTheme.parchment,
-        style: TextStyle(fontSize: 13, color: AntiqueTheme.inkSepia), value: _chapitre,
-        items: [for (final c in _chapitres) DropdownMenuItem(value: c, child: Text(c, overflow: TextOverflow.ellipsis))],
-        onChanged: (v) => setState(() => _chapitre = v))));
+    return Container(
+        margin: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+            color: const Color(0x14000000),
+            borderRadius: BorderRadius.circular(8)),
+        child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+                isExpanded: true,
+                dropdownColor: AntiqueTheme.parchment,
+                style: TextStyle(fontSize: 13, color: AntiqueTheme.inkSepia),
+                value: _chapitre,
+                items: [
+                  for (final c in _chapitres)
+                    DropdownMenuItem(
+                        value: c,
+                        child: Text(c, overflow: TextOverflow.ellipsis))
+                ],
+                onChanged: (v) => setState(() => _chapitre = v))));
   }
 
   Widget _console() {
     return Container(
-      decoration: BoxDecoration(color: AntiqueTheme.inkBlack,
-          borderRadius: BorderRadius.circular(12), border: Border.all(color: AntiqueTheme.leatherDeep, width: 1.5)),
-      padding: const EdgeInsets.all(14),
-      child: ListView(controller: _scroll, children: [
-        for (final l in _logs)
-          Padding(padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Text(l.text, style: TextStyle(fontSize: 13, color: _logColor(l.kind), fontFamily: 'Consolas'))),
-      ]));
+        decoration: BoxDecoration(
+            color: AntiqueTheme.inkBlack,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AntiqueTheme.leatherDeep, width: 1.5)),
+        padding: const EdgeInsets.all(14),
+        child: ListView(controller: _scroll, children: [
+          for (final l in _logs)
+            Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(l.text,
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: _logColor(l.kind),
+                        fontFamily: 'Consolas'))),
+        ]));
   }
 }
 
-class _ProgressIndicator extends StatelessWidget {
+class _ProgressIndicator extends StatefulWidget {
   final double target;
   final String phase;
-  const _ProgressIndicator({required this.target, required this.phase});
+  final bool active;
+  const _ProgressIndicator({
+    required this.target,
+    required this.phase,
+    required this.active,
+  });
+
+  @override
+  State<_ProgressIndicator> createState() => _ProgressIndicatorState();
+}
+
+class _ProgressIndicatorState extends State<_ProgressIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animation = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.active) _animation.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProgressIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      _animation.repeat();
+    } else if (!widget.active && oldWidget.active) {
+      _animation.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _animation.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      Expanded(child: LinearProgressIndicator(value: (target / 100).clamp(0.0, 1.0),
-          backgroundColor: AntiqueTheme.leatherDark,
-          valueColor: const AlwaysStoppedAnimation(AntiqueTheme.agedGold),
-          minHeight: 8)),
-      const SizedBox(width: 14),
-      SizedBox(width: 60, child: Text('${target.round()}%',
-          style: GoogleFonts.cinzel(fontSize: 18, fontWeight: FontWeight.w700, color: AntiqueTheme.agedGold))),
-      const SizedBox(width: 12),
-      Expanded(child: Text(phase, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: AntiqueTheme.parchment))),
-    ]);
+    final progress = (widget.target / 100).clamp(0.0, 1.0);
+    final completed = progress >= 1.0;
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) => Container(
+        height: 54,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: AntiqueTheme.leatherGradient,
+          border: Border.all(
+            color: completed ? AntiqueTheme.verdigris : AntiqueTheme.brass,
+          ),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: CustomPaint(
+                painter: _FolioProgressPainter(
+                  progress: progress,
+                  animation: _animation.value,
+                  completed: completed,
+                ),
+                child: const SizedBox.expand(),
+              ),
+            ),
+            const SizedBox(width: 14),
+            SizedBox(
+              width: 52,
+              child: Text(
+                '${widget.target.round()}%',
+                textAlign: TextAlign.right,
+                style: GoogleFonts.cinzel(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: completed
+                      ? AntiqueTheme.verdigris
+                      : AntiqueTheme.agedGold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            SizedBox(
+              width: 180,
+              child: Text(
+                widget.phase,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AntiqueTheme.parchment,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
+}
+
+class _FolioProgressPainter extends CustomPainter {
+  final double progress;
+  final double animation;
+  final bool completed;
+
+  const _FolioProgressPainter({
+    required this.progress,
+    required this.animation,
+    required this.completed,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
+    final y = size.height / 2;
+    final start = 4.0;
+    final end = size.width - 4.0;
+    final activeEnd = start + (end - start) * progress;
+    final ink = Paint()
+      ..color = AntiqueTheme.inkSepia.withValues(alpha: 0.72)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    final line = Paint()
+      ..color = completed ? AntiqueTheme.verdigris : AntiqueTheme.parchment
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    final guide = Path()
+      ..moveTo(start, y)
+      ..quadraticBezierTo(size.width * 0.52, y - 1.5, end, y);
+    canvas.drawPath(guide, ink);
+    if (progress > 0) {
+      final activePath = Path()
+        ..moveTo(start, y)
+        ..quadraticBezierTo(
+            activeEnd * 0.52 + start * 0.48, y - 1.5, activeEnd, y);
+      canvas.drawPath(activePath, line);
+    }
+
+    final cursorX = activeEnd.clamp(start, end).toDouble();
+    final pulse = 0.78 + 0.22 * math.sin(animation * math.pi * 2).abs();
+    final featherColor =
+        completed ? AntiqueTheme.verdigris : AntiqueTheme.agedGold;
+    final featherGlow = Paint()
+      ..color = (completed ? AntiqueTheme.verdigris : AntiqueTheme.candleGlow)
+          .withValues(alpha: 0.16 * pulse)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawCircle(
+      Offset(cursorX, y),
+      5.5 * pulse,
+      featherGlow,
+    );
+
+    canvas.save();
+    canvas.translate(cursorX, y);
+    canvas.rotate(-0.10 + math.sin(animation * math.pi * 2) * 0.035);
+
+    final feather = Path()
+      ..moveTo(1, 2)
+      ..cubicTo(-5, -9, -14, -17, -28, -15)
+      ..cubicTo(-25, -10, -24, -7, -29, -3)
+      ..cubicTo(-23, -4, -19, -1, -17, 3)
+      ..cubicTo(-12, 0, -8, 4, -6, 7)
+      ..cubicTo(-2, 6, 0, 4, 1, 2)
+      ..close();
+    canvas.drawPath(
+      feather,
+      Paint()
+        ..color = featherColor.withValues(alpha: 0.95)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawPath(
+      feather,
+      Paint()
+        ..color = AntiqueTheme.inkSepia.withValues(alpha: 0.8)
+        ..strokeWidth = 0.8
+        ..style = PaintingStyle.stroke,
+    );
+
+    final shaft = Paint()
+      ..color = AntiqueTheme.inkSepia
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(const Offset(-24, 10), const Offset(1, 2), shaft);
+    final barb = Paint()
+      ..color = AntiqueTheme.parchment.withValues(alpha: 0.65)
+      ..strokeWidth = 0.7
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(const Offset(-23, -11), const Offset(-17, -2), barb);
+    canvas.drawLine(const Offset(-18, -13), const Offset(-14, -4), barb);
+    canvas.drawLine(const Offset(-13, -12), const Offset(-10, -3), barb);
+    canvas.drawLine(const Offset(-22, -4), const Offset(-16, 0), barb);
+    canvas.drawLine(const Offset(-16, 0), const Offset(-11, 3), barb);
+    canvas.drawLine(const Offset(-11, 4), const Offset(-8, 5), barb);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _FolioProgressPainter oldDelegate) =>
+      progress != oldDelegate.progress ||
+      animation != oldDelegate.animation ||
+      completed != oldDelegate.completed;
 }
 
 class _ChoixDialog extends StatelessWidget {
@@ -1500,17 +2122,31 @@ class _ChoixDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(backgroundColor: AntiqueTheme.leatherDark,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: SizedBox(width: 420, height: 380, child: Column(children: [
-        Padding(padding: const EdgeInsets.all(14),
-          child: Text(titre, style: GoogleFonts.cinzel(color: AntiqueTheme.agedGold, fontSize: 16, fontWeight: FontWeight.w700))),
-        Expanded(child: ListView(children: [
-          for (final it in items)
-            ListTile(dense: true, title: Text(it, style: const TextStyle(color: Color(0xFFE8EAF6), fontSize: 13)),
-              onTap: () => Navigator.pop(context, it)),
-        ])),
-      ])));
+    return Dialog(
+        backgroundColor: AntiqueTheme.leatherDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: SizedBox(
+            width: 420,
+            height: 380,
+            child: Column(children: [
+              Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Text(titre,
+                      style: GoogleFonts.cinzel(
+                          color: AntiqueTheme.agedGold,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700))),
+              Expanded(
+                  child: ListView(children: [
+                for (final it in items)
+                  ListTile(
+                      dense: true,
+                      title: Text(it,
+                          style: const TextStyle(
+                              color: Color(0xFFE8EAF6), fontSize: 13)),
+                      onTap: () => Navigator.pop(context, it)),
+              ])),
+            ])));
   }
 }
 
@@ -1523,13 +2159,21 @@ class _SettingsDialog extends StatefulWidget {
 
 class _SettingsDialogState extends State<_SettingsDialog> {
   static const Map<String, String> _levelLabels = {
-    'default': 'Standard (Orthographe & Grammaire)', 'picky': 'Exigeant (Style, répétitions)'};
+    'default': 'Standard (Orthographe & Grammaire)',
+    'picky': 'Exigeant (Style, répétitions)'
+  };
   static const Map<String, String> _variantLabels = {
-    'fr-FR': 'Français (France)', 'fr-1990': 'Rectifications 1990', 'fr-CA': 'Français (Canada)',
-    'fr-CH': 'Français (Suisse)', 'fr-BE': 'Français (Belgique)'};
+    'fr-FR': 'Français (France)',
+    'fr-1990': 'Rectifications 1990',
+    'fr-CA': 'Français (Canada)',
+    'fr-CH': 'Français (Suisse)',
+    'fr-BE': 'Français (Belgique)'
+  };
 
-  late final TextEditingController _dir = TextEditingController(text: widget.initial.scriptsDir);
-  late final TextEditingController _py = TextEditingController(text: widget.initial.pythonPath);
+  late final TextEditingController _dir =
+      TextEditingController(text: widget.initial.scriptsDir);
+  late final TextEditingController _py =
+      TextEditingController(text: widget.initial.pythonPath);
   late String _level = widget.initial.spellLevel;
   late String _variant = widget.initial.spellVariant;
   late String _formatLivre = widget.initial.formatLivre;
@@ -1540,95 +2184,168 @@ class _SettingsDialogState extends State<_SettingsDialog> {
   late String _interligne = widget.initial.interligne;
 
   @override
-  void dispose() { _dir.dispose(); _py.dispose(); super.dispose(); }
+  void dispose() {
+    _dir.dispose();
+    _py.dispose();
+    super.dispose();
+  }
 
-  String _label(Map<String, String> map, String code, String defaut) => map[code] ?? map[defaut]!;
-  void _setCode(Map<String, String> map, String label, void Function(String) set) {
-    final e = map.entries.firstWhere((e) => e.value == label, orElse: () => map.entries.first);
+  String _label(Map<String, String> map, String code, String defaut) =>
+      map[code] ?? map[defaut]!;
+  void _setCode(
+      Map<String, String> map, String label, void Function(String) set) {
+    final e = map.entries
+        .firstWhere((e) => e.value == label, orElse: () => map.entries.first);
     set(e.key);
   }
-  String _dans(List<String> list, String val) => list.contains(val) ? val : list.first;
+
+  String _dans(List<String> list, String val) =>
+      list.contains(val) ? val : list.first;
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(backgroundColor: AntiqueTheme.leatherDark,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(width: 560, padding: const EdgeInsets.all(24),
-        child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text("⚙ Paramètres de l'application",
-              style: GoogleFonts.cinzel(fontSize: 18, fontWeight: FontWeight.w700, color: AntiqueTheme.agedGold)),
-          const SizedBox(height: 16),
-          _labelChamp('Dossier des scripts Python (backend)'),
-          TextField(controller: _dir, style: const TextStyle(color: Color(0xFFE8EAF6)), decoration: _inputStyle()),
-          const SizedBox(height: 12),
-          _labelChamp('Exécutable Python'),
-          TextField(controller: _py, style: const TextStyle(color: Color(0xFFE8EAF6)), decoration: _inputStyle()),
-          const SizedBox(height: 12),
-          _labelChamp('Niveau du correcteur'),
-          _dropdown(value: _label(_levelLabels, _level, 'default'), items: _levelLabels.values.toList(),
-              onChanged: (v) => setState(() => _setCode(_levelLabels, v!, (c) => _level = c))),
-          const SizedBox(height: 12),
-          _labelChamp('Variante orthographique'),
-          _dropdown(value: _label(_variantLabels, _variant, 'fr-FR'), items: _variantLabels.values.toList(),
-              onChanged: (v) => setState(() => _setCode(_variantLabels, v!, (c) => _variant = c))),
-          const SizedBox(height: 16),
-          Text('📖 STYLE & FORMAT DU LIVRE',
-              style: GoogleFonts.cinzel(fontSize: 14, fontWeight: FontWeight.w700, color: AntiqueTheme.agedGold)),
-          const SizedBox(height: 8),
-          _labelChamp('Format du livre final (KDP)'),
-          _dropdown(value: _dans(kFormats, _formatLivre), items: kFormats,
-              onChanged: (v) => setState(() => _formatLivre = v!)),
-          const SizedBox(height: 12),
-          _labelChamp('Police du corps de texte'),
-          _dropdown(value: _dans(kPolices, _texteFont), items: kPolices,
-              onChanged: (v) => setState(() => _texteFont = v!)),
-          const SizedBox(height: 12),
-          _labelChamp('Police des titres & lettrines'),
-          _dropdown(value: _dans(kPolices, _titresFont), items: kPolices,
-              onChanged: (v) => setState(() => _titresFont = v!)),
-          const SizedBox(height: 12),
-          _labelChamp('Taille du corps (pt)'),
-          _dropdown(value: _dans(kTaillesTexte, _texteSize), items: kTaillesTexte,
-              onChanged: (v) => setState(() => _texteSize = v!)),
-          const SizedBox(height: 12),
-          _labelChamp('Taille des titres (pt)'),
-          _dropdown(value: _dans(kTaillesTitres, _titresSize), items: kTaillesTitres,
-              onChanged: (v) => setState(() => _titresSize = v!)),
-          const SizedBox(height: 12),
-          _labelChamp('Interligne du corps'),
-          _dropdown(value: _dans(kInterlignes, _interligne), items: kInterlignes,
-              onChanged: (v) => setState(() => _interligne = v!)),
-          const SizedBox(height: 20),
-          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-            OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-            const SizedBox(width: 8),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: AntiqueTheme.verdigris, foregroundColor: Colors.black),
-              onPressed: () => Navigator.pop(context, _AppSettings(
-                scriptsDir: _dir.text.trim(), pythonPath: _py.text.trim(), spellLevel: _level,
-                spellVariant: _variant, formatLivre: _formatLivre,
-                texteFont: _texteFont, titresFont: _titresFont,
-                texteSize: _texteSize, titresSize: _titresSize, interligne: _interligne)),
-              child: const Text('Sauvegarder')),
-          ]),
-        ]))));
+    return Dialog(
+        backgroundColor: AntiqueTheme.leatherDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+            width: 560,
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+                child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text("⚙ Paramètres de l'application",
+                      style: GoogleFonts.cinzel(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AntiqueTheme.agedGold)),
+                  const SizedBox(height: 16),
+                  _labelChamp('Dossier des scripts Python (backend)'),
+                  TextField(
+                      controller: _dir,
+                      style: const TextStyle(color: Color(0xFFE8EAF6)),
+                      decoration: _inputStyle()),
+                  const SizedBox(height: 12),
+                  _labelChamp('Exécutable Python'),
+                  TextField(
+                      controller: _py,
+                      style: const TextStyle(color: Color(0xFFE8EAF6)),
+                      decoration: _inputStyle()),
+                  const SizedBox(height: 12),
+                  _labelChamp('Niveau du correcteur'),
+                  _dropdown(
+                      value: _label(_levelLabels, _level, 'default'),
+                      items: _levelLabels.values.toList(),
+                      onChanged: (v) => setState(
+                          () => _setCode(_levelLabels, v!, (c) => _level = c))),
+                  const SizedBox(height: 12),
+                  _labelChamp('Variante orthographique'),
+                  _dropdown(
+                      value: _label(_variantLabels, _variant, 'fr-FR'),
+                      items: _variantLabels.values.toList(),
+                      onChanged: (v) => setState(() =>
+                          _setCode(_variantLabels, v!, (c) => _variant = c))),
+                  const SizedBox(height: 16),
+                  Text('📖 STYLE & FORMAT DU LIVRE',
+                      style: GoogleFonts.cinzel(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AntiqueTheme.agedGold)),
+                  const SizedBox(height: 8),
+                  _labelChamp('Format du livre final (KDP)'),
+                  _dropdown(
+                      value: _dans(kFormats, _formatLivre),
+                      items: kFormats,
+                      onChanged: (v) => setState(() => _formatLivre = v!)),
+                  const SizedBox(height: 12),
+                  _labelChamp('Police du corps de texte'),
+                  _dropdown(
+                      value: _dans(kPolices, _texteFont),
+                      items: kPolices,
+                      onChanged: (v) => setState(() => _texteFont = v!)),
+                  const SizedBox(height: 12),
+                  _labelChamp('Police des titres & lettrines'),
+                  _dropdown(
+                      value: _dans(kPolices, _titresFont),
+                      items: kPolices,
+                      onChanged: (v) => setState(() => _titresFont = v!)),
+                  const SizedBox(height: 12),
+                  _labelChamp('Taille du corps (pt)'),
+                  _dropdown(
+                      value: _dans(kTaillesTexte, _texteSize),
+                      items: kTaillesTexte,
+                      onChanged: (v) => setState(() => _texteSize = v!)),
+                  const SizedBox(height: 12),
+                  _labelChamp('Taille des titres (pt)'),
+                  _dropdown(
+                      value: _dans(kTaillesTitres, _titresSize),
+                      items: kTaillesTitres,
+                      onChanged: (v) => setState(() => _titresSize = v!)),
+                  const SizedBox(height: 12),
+                  _labelChamp('Interligne du corps'),
+                  _dropdown(
+                      value: _dans(kInterlignes, _interligne),
+                      items: kInterlignes,
+                      onChanged: (v) => setState(() => _interligne = v!)),
+                  const SizedBox(height: 20),
+                  Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                    OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Annuler')),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                        style: FilledButton.styleFrom(
+                            backgroundColor: AntiqueTheme.verdigris,
+                            foregroundColor: Colors.black),
+                        onPressed: () => Navigator.pop(
+                            context,
+                            _AppSettings(
+                                scriptsDir: _dir.text.trim(),
+                                pythonPath: _py.text.trim(),
+                                spellLevel: _level,
+                                spellVariant: _variant,
+                                formatLivre: _formatLivre,
+                                texteFont: _texteFont,
+                                titresFont: _titresFont,
+                                texteSize: _texteSize,
+                                titresSize: _titresSize,
+                                interligne: _interligne)),
+                        child: const Text('Sauvegarder')),
+                  ]),
+                ]))));
   }
 
-  Widget _labelChamp(String t) => Padding(padding: const EdgeInsets.only(bottom: 6),
-      child: Text(t, style: const TextStyle(fontSize: 12, color: Color(0xFF9A8B6F))));
+  Widget _labelChamp(String t) => Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(t,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF9A8B6F))));
 
-  InputDecoration _inputStyle() => InputDecoration(filled: true, fillColor: const Color(0xFF1B2036),
+  InputDecoration _inputStyle() => InputDecoration(
+      filled: true,
+      fillColor: const Color(0xFF1B2036),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)));
 
-  Widget _dropdown({required String value, required List<String> items, required ValueChanged<String?> onChanged}) {
-    return Container(padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(color: const Color(0xFF1B2036), borderRadius: BorderRadius.circular(8)),
-      child: DropdownButtonHideUnderline(child: DropdownButton<String>(
-        isExpanded: true, dropdownColor: const Color(0xFF1B2036),
-        style: const TextStyle(color: Color(0xFFE8EAF6)), value: value,
-        items: [for (final i in items) DropdownMenuItem(value: i, child: Text(i))],
-        onChanged: onChanged)));
+  Widget _dropdown(
+      {required String value,
+      required List<String> items,
+      required ValueChanged<String?> onChanged}) {
+    return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+            color: const Color(0xFF1B2036),
+            borderRadius: BorderRadius.circular(8)),
+        child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+                isExpanded: true,
+                dropdownColor: const Color(0xFF1B2036),
+                style: const TextStyle(color: Color(0xFFE8EAF6)),
+                value: value,
+                items: [
+                  for (final i in items)
+                    DropdownMenuItem(value: i, child: Text(i))
+                ],
+                onChanged: onChanged)));
   }
 }
 
@@ -1646,55 +2363,94 @@ class _CorrectionDialogState extends State<_CorrectionDialog> {
   @override
   void initState() {
     super.initState();
-    if (widget.match.suggestions.isNotEmpty) _suggestion = widget.match.suggestions.first;
+    if (widget.match.suggestions.isNotEmpty) {
+      _suggestion = widget.match.suggestions.first;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final m = widget.match;
-    return Dialog(backgroundColor: AntiqueTheme.leatherDark,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(width: 560, padding: const EdgeInsets.all(24),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('📝 Correction orthographique',
-            style: GoogleFonts.cinzel(fontSize: 18, fontWeight: FontWeight.w700, color: AntiqueTheme.agedGold)),
-        const SizedBox(height: 12),
-        Text(m.message, style: const TextStyle(color: Color(0xFFFF6B6B))),
-        const SizedBox(height: 12),
-        Container(width: double.infinity, padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: const Color(0xFF1B2036), borderRadius: BorderRadius.circular(8)),
-          child: Text('…${m.contextText}…', style: const TextStyle(color: Color(0xFFC9CDE0)))),
-        const SizedBox(height: 16),
-        if (m.suggestions.isNotEmpty) ...[
-          const Text('Suggestions :', style: TextStyle(fontSize: 12, color: Color(0xFF6B7194))),
-          const SizedBox(height: 6),
-          DropdownButtonFormField<String>(initialValue: _suggestion,
-            dropdownColor: const Color(0xFF1B2036),
-            style: const TextStyle(color: Color(0xFFE8EAF6)),
-            items: [for (final s in m.suggestions) DropdownMenuItem(value: s, child: Text(s))],
-            onChanged: (v) => setState(() => _suggestion = v)),
-        ],
-        const SizedBox(height: 8),
-        TextField(controller: _manuel, style: const TextStyle(color: Color(0xFFE8EAF6)),
-          decoration: InputDecoration(labelText: 'Ou modifier manuellement',
-            labelStyle: const TextStyle(color: Color(0xFF6B7194)), filled: true,
-            fillColor: const Color(0xFF1B2036),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)))),
-        const SizedBox(height: 20),
-        Row(children: [
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AntiqueTheme.verdigris, foregroundColor: Colors.black),
-            onPressed: () => Navigator.pop(context, _ResultCorrection(
-                valeur: _manuel.text.isNotEmpty ? _manuel.text : _suggestion)),
-            child: const Text('Appliquer')),
-          const SizedBox(width: 8),
-          OutlinedButton(onPressed: () => Navigator.pop(context, const _ResultCorrection()),
-              child: const Text('Ignorer')),
-          const Spacer(),
-          TextButton(style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF6B6B)),
-            onPressed: () => Navigator.pop(context, const _ResultCorrection(ignoreAll: true)),
-            child: const Text('Ignorer tout')),
-        ]),
-      ])));
+    return Dialog(
+        backgroundColor: AntiqueTheme.leatherDark,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+            width: 560,
+            padding: const EdgeInsets.all(24),
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('📝 Correction orthographique',
+                      style: GoogleFonts.cinzel(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AntiqueTheme.agedGold)),
+                  const SizedBox(height: 12),
+                  Text(m.message,
+                      style: const TextStyle(color: Color(0xFFFF6B6B))),
+                  const SizedBox(height: 12),
+                  Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                          color: const Color(0xFF1B2036),
+                          borderRadius: BorderRadius.circular(8)),
+                      child: Text('…${m.contextText}…',
+                          style: const TextStyle(color: Color(0xFFC9CDE0)))),
+                  const SizedBox(height: 16),
+                  if (m.suggestions.isNotEmpty) ...[
+                    const Text('Suggestions :',
+                        style:
+                            TextStyle(fontSize: 12, color: Color(0xFF6B7194))),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                        initialValue: _suggestion,
+                        dropdownColor: const Color(0xFF1B2036),
+                        style: const TextStyle(color: Color(0xFFE8EAF6)),
+                        items: [
+                          for (final s in m.suggestions)
+                            DropdownMenuItem(value: s, child: Text(s))
+                        ],
+                        onChanged: (v) => setState(() => _suggestion = v)),
+                  ],
+                  const SizedBox(height: 8),
+                  TextField(
+                      controller: _manuel,
+                      style: const TextStyle(color: Color(0xFFE8EAF6)),
+                      decoration: InputDecoration(
+                          labelText: 'Ou modifier manuellement',
+                          labelStyle: const TextStyle(color: Color(0xFF6B7194)),
+                          filled: true,
+                          fillColor: const Color(0xFF1B2036),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8)))),
+                  const SizedBox(height: 20),
+                  Row(children: [
+                    FilledButton(
+                        style: FilledButton.styleFrom(
+                            backgroundColor: AntiqueTheme.verdigris,
+                            foregroundColor: Colors.black),
+                        onPressed: () => Navigator.pop(
+                            context,
+                            _ResultCorrection(
+                                valeur: _manuel.text.isNotEmpty
+                                    ? _manuel.text
+                                    : _suggestion)),
+                        child: const Text('Appliquer')),
+                    const SizedBox(width: 8),
+                    OutlinedButton(
+                        onPressed: () =>
+                            Navigator.pop(context, const _ResultCorrection()),
+                        child: const Text('Ignorer')),
+                    const Spacer(),
+                    TextButton(
+                        style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFFFF6B6B)),
+                        onPressed: () => Navigator.pop(
+                            context, const _ResultCorrection(ignoreAll: true)),
+                        child: const Text('Ignorer tout')),
+                  ]),
+                ])));
   }
 }

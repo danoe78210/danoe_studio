@@ -19,6 +19,8 @@ def dimensions_pour_format(label):
     return 17.78, 25.4
 _M = REGLES.get('marges_kdp', {})
 BAREME_KDP = [(int(m), float(g)) for m, g in _M.get('bareme_po', [(828, 0.875)])]
+MARGES_EXTERIEURES_KDP = [(int(m), float(o)) for m, o in _M.get(
+    'marges_exterieures_po', [(828, 0.625)])]
 GARDE = float(_M.get('garde_po', 0.125))
 MARGES_SYMETRIQUES = bool(_M.get('symetriques', True))
 def gouttiere_kdp_pour(p):

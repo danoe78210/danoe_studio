@@ -27,7 +27,7 @@ class QrCodeCard extends StatelessWidget {
           border: Border.all(color: AntiqueTheme.brass, width: 2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -54,7 +54,7 @@ class QrCodeCard extends StatelessWidget {
               style: GoogleFonts.cormorant(
                 fontSize: 14,
                 fontStyle: FontStyle.italic,
-                color: AntiqueTheme.inkSepia.withOpacity(0.7),
+                color: AntiqueTheme.inkSepia.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -89,9 +89,10 @@ class QrCodeCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: AntiqueTheme.brass.withOpacity(0.1),
+                color: AntiqueTheme.brass.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AntiqueTheme.brass.withOpacity(0.3)),
+                border: Border.all(
+                    color: AntiqueTheme.brass.withValues(alpha: 0.3)),
               ),
               child: Text(
                 url.replaceFirst('https://', '').replaceFirst('http://', ''),

@@ -265,7 +265,8 @@ def charger_configuration():
                     if sk not in data[k]:
                         data[k][sk] = sv
         return data
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ Erreur lecture JSON : {e}")
         return json.loads(json.dumps(CONFIG_VIDE))
 
 

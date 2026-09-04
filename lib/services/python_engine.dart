@@ -47,7 +47,8 @@ class PythonEngine {
       // ── CORRECTION UnicodeEncodeError ──────────────────────────
       // Force Python à écrire stdout/stderr en UTF-8 (emojis 🧩📖…),
       // car en sous-processus la sortie est un pipe en cp1252 sinon.
-      environment: const {
+      environment: {
+        ...Platform.environment,
         'PYTHONIOENCODING': 'utf-8',
         'PYTHONUTF8': '1',
       },

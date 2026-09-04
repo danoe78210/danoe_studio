@@ -454,7 +454,8 @@ def construire_ebook(docx_path, infos, images, sortie):
                 add('frontispice-img', 'images/frontispice.jpg', 'image/jpeg', _buf.getvalue())
                 add_page('frontispice', 'frontispice.xhtml', 'Frontispice',
                          '<div class="planche"><p><img src="images/frontispice.jpg" alt="frontispice"/></p></div>')
-            except Exception: pass
+            except Exception as e:
+                print(f'   ⚠️ Frontispice ignoré ({_fp}) : {e}')
 
     # ── Pages liminaires (structure éditoriale française) ──
     
@@ -832,9 +833,8 @@ def main(docx_override=None):
     return 1
 
 
-# ── v1.6 : PLUS DE sys.exit() ici ──
-# Le code de retour est exposé via EBOOK_CODE : le thread de l'interface
-# se termine donc toujours proprement et l'interface se déverrouille.
+# Le code de retour reste exposé lorsqu'il est importé par l'interface.
+# En exécution CLI, il doit toutefois être transmis au processus.
 if __name__ == '__main__':
     if '--docx' in sys.argv:
         idx = sys.argv.index('--docx')
@@ -845,6 +845,7 @@ if __name__ == '__main__':
         EBOOK_CODE = 0
     else:
         EBOOK_CODE = main()
+    raise SystemExit(EBOOK_CODE)
 def _normaliser_cles(d):
     """Recadre les clés (espaces finaux du JSON du menu Informations)."""
     if not isinstance(d, dict):

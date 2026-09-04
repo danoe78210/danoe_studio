@@ -45,7 +45,8 @@ class _RibbonTabState extends State<RibbonTab> {
             duration: const Duration(milliseconds: 160),
             width: widget.width,
             height: widget.height,
-            transform: Matrix4.identity()..translate(_hover ? 3.0 : 0.0, 0),
+            transform: Matrix4.identity()
+              ..translateByDouble(_hover ? 3.0 : 0.0, 0, 0, 1),
             child: CustomPaint(
               painter: _RibbonPainter(
                   color: widget.color, active: widget.active, hovered: _hover),
@@ -77,7 +78,8 @@ class _RibbonPainter extends CustomPainter {
   final Color color;
   final bool active;
   final bool hovered;
-  _RibbonPainter({required this.color, required this.active, required this.hovered});
+  _RibbonPainter(
+      {required this.color, required this.active, required this.hovered});
 
   @override
   void paint(Canvas c, Size s) {
@@ -91,22 +93,36 @@ class _RibbonPainter extends CustomPainter {
       ..close();
 
     // Halo (lueur au survol) ou ombre
-    c.drawPath(path, Paint()
-      ..color = hovered ? AntiqueTheme.candleGlow.withOpacity(0.40) : const Color(0x88000000)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, hovered ? 7 : 3));
+    c.drawPath(
+        path,
+        Paint()
+          ..color = hovered
+              ? AntiqueTheme.candleGlow.withValues(alpha: 0.40)
+              : const Color(0x88000000)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, hovered ? 7 : 3));
 
     // Corps du ruban
-    final g = LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [
-      color.withOpacity(active ? 1.0 : (hovered ? 0.95 : 0.82)),
-      color.withOpacity(active ? 0.90 : (hovered ? 0.80 : 0.62)),
-    ]);
-    c.drawPath(path, Paint()..shader = g.createShader(Rect.fromLTWH(0, 0, s.width, s.height)));
+    final g = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          color.withValues(alpha: active ? 1.0 : (hovered ? 0.95 : 0.82)),
+          color.withValues(alpha: active ? 0.90 : (hovered ? 0.80 : 0.62)),
+        ]);
+    c.drawPath(
+        path,
+        Paint()
+          ..shader = g.createShader(Rect.fromLTWH(0, 0, s.width, s.height)));
 
     // Liseré or
-    c.drawPath(path, Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..color = (active || hovered) ? AntiqueTheme.agedGold : const Color(0x66D9B44A));
+    c.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2
+          ..color = (active || hovered)
+              ? AntiqueTheme.agedGold
+              : const Color(0x66D9B44A));
   }
 
   @override

@@ -1346,3 +1346,8 @@ if __name__ == "__main__":
             IA_ROMAN_CODE = main()
     else:
         IA_ROMAN_CODE = main()
+
+    code = (IA_TRADUCTION_CODE
+            if sys.argv[1:2] in (['--traduire'], ['--traduire-chapitre'])
+            else IA_ROMAN_CODE)
+    raise SystemExit(code)

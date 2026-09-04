@@ -30,22 +30,35 @@ from reportlab.pdfbase.ttfonts import TTFont
 from pypdf import PdfReader, PdfWriter
 import regles as _R
 
-FORMATS_LIVRE = [('5 x 8 po', 12.7, 20.32), ('5.06 x 7.81 po', 12.85, 19.84),
-                 ('5.25 x 8 po', 13.34, 20.32), ('5.5 x 8.5 po', 13.97, 21.59),
-                 ('6 x 9 po', 15.24, 22.86), ('6.14 x 9.21 po', 15.6, 23.4),
-                 ('7 x 10 po', 17.78, 25.4), ('8 x 10 po', 20.32, 25.4),
-                 ('8.5 x 8.5 po', 21.59, 21.59), ('8.5 x 11 po', 21.59, 27.94),
-                 ('A4', 21.0, 29.7)]
-KDP_MARGES = [(150, .375, .250), (300, .5, .313), (500, .625, .375),
-              (700, .75, .5), (828, .875, .625)]
+FORMATS_LIVRE = _R.FORMATS_LIVRE
+KDP_MARGES = [(maxi, gutter, _R.MARGES_EXTERIEURES_KDP[index][1])
+              for index, (maxi, gutter) in enumerate(_R.BAREME_KDP)]
 
 def nettoyer(v): return str(v).strip().strip('`').strip('*').strip() if v is not None else ''
+
+
+def _normaliser_cles(d):
+    if isinstance(d, dict):
+        return {str(k).strip(): _normaliser_cles(v) for k, v in d.items()}
+    if isinstance(d, list):
+        return [_normaliser_cles(x) for x in d]
+    if isinstance(d, str):
+        return d.strip()
+    return d
+
+
+def _infos_de(d):
+    d = _normaliser_cles(d or {})
+    infos = d.get('informations') if isinstance(d, dict) else None
+    return infos if isinstance(infos, dict) else {}
+
 
 def _lire_json():
     try:
         with open(CHEMIN_CONFIG_JSON, encoding='utf-8') as f:
             return _normaliser_cles(json.load(f))
-    except Exception:
+    except Exception as e:
+        print(f'   ⚠️ Configuration JSON illisible : {e}')
         return None
 
 # ── lecture config (JSON prioritaire, repli Excel) ──
@@ -79,7 +92,8 @@ def lire_style():
                 s['format'] = str(g('format') or s['format'])
                 s['taille_corps'] = float(str(g('taille du corps') or 11).replace(',', '.'))
                 s['interligne'] = float(str(g('interligne') or 1).replace(',', '.'))
-        except Exception: pass
+        except Exception as e:
+            print(f'   ⚠️ Configuration Excel ignorée : {e}')
     lab = s['format'].lower()
     for nom, w, h in FORMATS_LIVRE:
         if nom.lower() in lab: s['largeur_cm'], s['hauteur_cm'] = w, h; break
@@ -92,12 +106,7 @@ def lire_style():
     return s
 
 def _get_infos(d):
-    d = d or {}
-    if 'informations' in d: return d['informations'] or {}
-    if 'informations ' in d: return d['informations '] or {}
-    for k, v in d.items():
-        if str(k).strip() == 'informations' and isinstance(v, dict): return v
-    return {}
+    return _infos_de(d)
 
 
 def _get_section(d, nom, defaut=None):
@@ -113,13 +122,8 @@ def _section_infos(d):
     return _get_section(d, 'informations', {}) or {}
 
 def lire_infos():
-    def _norm(d):
-        if not isinstance(d, dict):
-            return d
-        return {str(k).strip(): (_norm(v) if isinstance(v, dict) else v)
-                for k, v in d.items()}
     infos = {}
-    j = _norm(_lire_json() or {})
+    j = _lire_json() or {}
     ji = j.get('informations')
     ji = ji if isinstance(ji, dict) else {}
     for cle, val in ji.items():
@@ -135,18 +139,23 @@ def lire_infos():
                     infos[nettoyer(row[0]).lower()] = nettoyer(row[1])
         except Exception:
             pass
+    for source, cible in {
+        'titre_complet': 'titre complet du roman',
+        'sous_titre': 'sous-titre éventuel',
+        'auteur': "nom de l'auteur (couverture)",
+        'annee_publication': 'année de publication',
+        'depot_legal': 'dépôt légal',
+        'mention_copyright': 'mention de copyright',
+        'dedicace': 'dédicace',
+        'epigraphe': 'épigraphe',
+    }.items():
+        if source in infos and cible not in infos:
+            infos[cible] = infos[source]
     return infos
 
 def lire_annexes():
-    def _norm(d):
-        if not isinstance(d, dict):
-            return d
-        return {str(k).strip(): (_norm(v) if isinstance(v, dict) else v)
-                for k, v in d.items()}
     ax = {'sommaire': True}
-    j = _norm(_lire_json() or {})
-    ji = j.get('informations')
-    ji = ji if isinstance(ji, dict) else {}
+    ji = _infos_de(_lire_json() or {})
     def g(*cles):
         for c in cles:
             v = ji.get(c)
@@ -355,6 +364,16 @@ def slug(s): return re.sub(r'[^\w]+', '_', s.strip(), flags=re.UNICODE).strip('_
 def generer(safe=False):
     STYLE = lire_style(); INFOS = lire_infos(); ORG = lire_organisation()
     F = registre_polices()
+    chapitres_charges = {}
+
+    def charger_depuis_cache(fichier, titre):
+        cle = (fichier, titre)
+        if cle not in chapitres_charges:
+            pref = re.match(r'(\d+\.\d+)', fichier)
+            chapitres_charges[cle] = charger_chapitre(
+                pref.group(1) if pref else fichier, titre) or []
+        return chapitres_charges[cle]
+
     TC = STYLE['taille_corps']; IL = STYLE['interligne']
     W, H = STYLE['largeur_po'] * 72, STYLE['hauteur_po'] * 72
     lead = TC * 1.2 * IL
@@ -362,6 +381,7 @@ def generer(safe=False):
     st_corps = ParagraphStyle('c', fontName=F['c'], fontSize=TC, leading=lead,
                               alignment=TA_JUSTIFY, spaceBefore=TC * 0.8, wordWrap=ww)
     st_debut = ParagraphStyle('d', parent=st_corps, firstLineIndent=0.5 * cm, spaceBefore=0)
+    titre_corps_gap = 1.5 * cm
     st_acte = ParagraphStyle('a', fontName=F['t'], fontSize=STYLE['taille_acte'],
                              alignment=TA_CENTER, spaceBefore=12, spaceAfter=12)
     st_ch1 = ParagraphStyle('h1', fontName=F['t'], fontSize=STYLE['taille_chap1'], alignment=TA_CENTER)
@@ -369,6 +389,8 @@ def generer(safe=False):
                             alignment=TA_CENTER, spaceBefore=6)
     st_sous = ParagraphStyle('s', fontName=F['b'], fontSize=STYLE['taille_sous'],
                              alignment=TA_CENTER, spaceBefore=12, spaceAfter=12)
+    st_ch1_corps = ParagraphStyle('h1_corps', parent=st_ch1, spaceAfter=titre_corps_gap)
+    st_sous_corps = ParagraphStyle('s_corps', parent=st_sous, spaceAfter=titre_corps_gap)
     st_sep = ParagraphStyle('sep', fontName=F['c'], fontSize=TC, alignment=TA_CENTER,
                             spaceBefore=TC, spaceAfter=TC)
     st_leg = ParagraphStyle('leg', fontName=F['i'], fontSize=9, alignment=TA_CENTER, spaceBefore=6)
@@ -393,8 +415,8 @@ def generer(safe=False):
     mots = 0
     for b in ORG:
         if b['type'] == 'chapitre':
-            it = charger_chapitre(re.match(r'(\d+\.\d+)', b['fichier']).group(1), b['titre'])
-            mots += sum(len(t.split()) for k, t in (it or []) if k == 'p')
+            it = charger_depuis_cache(b['fichier'], b['titre'])
+            mots += sum(len(t.split()) for k, t in it if k == 'p')
     pages_est = 120.0
     for _ in range(6):
         for maxi, g, o in KDP_MARGES:
@@ -417,7 +439,7 @@ def generer(safe=False):
     _tit = INFOS.get('titre complet du roman', '') or 'Titre'
     _sous = INFOS.get('sous-titre éventuel', '') or ''
     _aut = INFOS.get("nom de l'auteur (couverture)", '') or 'Auteur'
-    _ann = INFOS.get('année de publication', '2026')
+    _ann = INFOS.get('année de publication') or '2026'
     _larg_utile = STYLE['largeur_cm'] * cm - 4 * cm
     _haut_utile = H - 3.8 * cm
     lim = []
@@ -437,12 +459,10 @@ def generer(safe=False):
                 lim += [Spacer(1, 2 * cm), _img]
             except Exception: pass
         lim.append(PageBreak())
-    # 4. Page de titre (titre, sous-titre, auteur, éditeur)
+    # 4. Page de titre (titre, sous-titre, auteur)
     lim.append(Paragraph(escape(_tit.upper()), st_acte))
     if _sous: lim.append(Paragraph(escape(_sous), st_ch2))
     lim += [Spacer(1, 2 * cm), Paragraph(escape(_aut), st_ch2)]
-    if _ax.get('editeur'):
-        lim += [Spacer(1, 1 * cm), Paragraph(escape(_ax['editeur']), st_lim)]
     lim.append(PageBreak())
     # 5. Copyright (verso : mentions, ISBN, dépôt légal, édition)
     _cop = [Paragraph(escape((_tit + ' – ' + _sous) if _sous else _tit), st_lim)]
@@ -452,7 +472,8 @@ def generer(safe=False):
     _meta = ' – '.join(x for x in [INFOS.get('édition', ''), _ann] if x)
     if _meta: _cop.append(Paragraph(escape(_meta), st_lim))
     if INFOS.get('isbn'): _cop.append(Paragraph('ISBN : ' + escape(INFOS['isbn']), st_lim))
-    _cop.append(Paragraph('Dépôt légal : ' + _ann, st_lim))
+    if INFOS.get('dépôt légal'):
+        _cop.append(Paragraph('Dépôt légal : ' + escape(INFOS['dépôt légal']), st_lim))
     if _ax.get('editeur'): _cop.append(Paragraph(escape(_ax['editeur']), st_lim))
     _cop.append(Spacer(1, 0.6 * cm))
     for _t in ['Toute reproduction, même partielle, est interdite sans l’autorisation',
@@ -465,14 +486,20 @@ def generer(safe=False):
     lim.append(Spacer(1, max(0, _haut_utile - _h_cop)))
     lim += _cop
     lim.append(PageBreak())
-    # 6. Dédicace (page impaire dédiée)
+    # 6. Avertissement
+    if INFOS.get('avertissement'):
+        lim += [Spacer(1, 2 * cm)]
+        lim += [Paragraph(escape(x), st_ch2)
+                for x in INFOS['avertissement'].splitlines() if x.strip()]
+        lim.append(PageBreak())
+    # 7. Dédicace (page impaire dédiée)
     if INFOS.get('dédicace'):
         _ded = [Paragraph(escape(x), st_ch2) for x in INFOS['dédicace'].splitlines() if x.strip()]
         _h_d = sum(_f.wrap(_larg_utile, _haut_utile)[1] for _f in _ded)
         lim.append(Spacer(1, max(0, (_haut_utile - _h_d) / 2)))
         lim += _ded
         lim.append(PageBreak())
-    # 7. Épigraphe
+    # 8. Épigraphe
     if INFOS.get('épigraphe'):
         _epi = [Paragraph(escape(x), st_ch2) for x in INFOS['épigraphe'].splitlines() if x.strip()]
         _h_e = sum(_f.wrap(_larg_utile, _haut_utile)[1] for _f in _epi)
@@ -514,9 +541,10 @@ def generer(safe=False):
             segments.append({'type': 'acte', 'titre': b['acte'], 'entete': None,
                              'story': [Spacer(1, 4 * cm), Paragraph(escape(b['acte']), st_acte)]})
         else:
-            pref = re.match(r'(\d+\.\d+)', b['fichier']).group(1)
+            pref_match = re.match(r'(\d+\.\d+)', b['fichier'])
+            pref = pref_match.group(1) if pref_match else b['fichier']
             sans = pref in SANS_TITRE
-            items = charger_chapitre(pref, b['titre']) or []
+            items = charger_depuis_cache(b['fichier'], b['titre'])
             if items and items[0][0] in ('h1', 'h2') and not sans: items.pop(0)
             while items and items[0][0] == 'sep': items.pop(0)
             st = []
@@ -527,17 +555,38 @@ def generer(safe=False):
                            Paragraph(escape(l2), st_ch2)]
                 else:
                     st += [Spacer(1, 3 * cm), Paragraph(escape(b['titre']), st_ch1)]
+            st.append(Spacer(1, titre_corps_gap))
             premier = True
             for k, t in items:
-                if k == 'h1': st += [PageBreak(), Paragraph(escape(t), st_ch1)]; premier = True
-                elif k == 'h2': st += [PageBreak(), Paragraph(escape(t), st_sous)]; premier = True
+                if k == 'h1': st += [PageBreak(), Paragraph(escape(t), st_ch1_corps)]; premier = True
+                elif k == 'h2': st += [PageBreak(), Paragraph(escape(t), st_sous_corps)]; premier = True
                 elif k == 'sep': st.append(Paragraph('--- ✦ ---', st_sep))
                 else:
                     st.append(para(t, st_debut if premier else st_corps, gras_debut=premier))
                     premier = False
             segments.append({'type': 'chapitre', 'titre': b['titre'], 'entete': b['titre'], 'story': st})
 
-        # ── UNE SEULE passe de rendu + fusion (offset connu en avançant) ──
+    if _ax.get('postface'):
+        _pc = os.path.join(DOSSIER_CHAPITRES, _ax['postface'] + '.md')
+        if os.path.isfile(_pc):
+            _st = [Paragraph('Postface', st_acte)]
+            for _ln in open(_pc, encoding='utf-8').read().splitlines():
+                _ln = _ln.strip()
+                if _ln and not _ln.startswith('# '):
+                    _st.append(Paragraph(escape(_ln), st_lim))
+            segments.append({'type': 'postface', 'story': _st, 'entete': None})
+    if _ax.get('remerciements'):
+        _st = [Paragraph('Remerciements', st_acte)]
+        _st.extend(Paragraph(escape(_ln.strip()), st_lim)
+                   for _ln in _ax['remerciements'].splitlines() if _ln.strip())
+        segments.append({'type': 'remerciements', 'story': _st, 'entete': None})
+    if _ax.get('autres_livres'):
+        _st = [Paragraph('Du même auteur', st_acte)]
+        _st.extend(Paragraph(escape('• ' + _ln.strip()), st_lim)
+                   for _ln in _ax['autres_livres'].splitlines() if _ln.strip())
+        segments.append({'type': 'autres_livres', 'story': _st, 'entete': None})
+
+    # ── UNE SEULE passe de rendu + fusion (offset connu en avançant) ──
     writer = PdfWriter()
     running = 1
     debut_num = None
@@ -622,15 +671,3 @@ if __name__ == '__main__':
         _convert_word_pdf(sys.argv[_i + 1], sys.argv[_i + 2])
     else:
         main()
-def _normaliser_cles(d):
-    """Recadre les clés (espaces finaux du JSON du menu Informations)."""
-    if not isinstance(d, dict):
-        return d
-    return {str(k).strip(): (_normaliser_cles(v) if isinstance(v, dict) else v)
-            for k, v in d.items()}
-
-def _infos_de(d):
-    """Retourne le sous-dictionnaire 'informations' normalisé (tolérant)."""
-    d = _normaliser_cles(d or {})
-    v = d.get('informations')
-    return v if isinstance(v, dict) else {}
