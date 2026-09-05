@@ -98,7 +98,8 @@ foreach ($page in $pages) {
     }
 
     Set-ClientSize $process.MainWindowHandle $Width $Height
-    Start-Sleep -Milliseconds 200
+    # Laisser Flutter charger les polices et terminer le premier rendu.
+    Start-Sleep -Seconds 3
     $bounds = Get-ClientBounds $process.MainWindowHandle
     if ($bounds.Width -ne $Width -or $bounds.Height -ne $Height) {
       throw "Surface client inattendue : $($bounds.Width)x$($bounds.Height), attendu ${Width}x${Height}."
