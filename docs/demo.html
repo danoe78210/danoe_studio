@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Démo visuelle — Danoë Studio</title>
+<meta name="description" content="Découvrez les interfaces de Danoë Studio, de la configuration du manuscrit à la production Word, PDF et EPUB.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{--cuir:#2A180C;--parchemin:#F3E7C9;--parchemin2:#E8D9B0;--or:#D4A84B;--or2:#B8860B;--sang:#8E2A2A;--encre:#2b2016}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Crimson Text',serif;color:var(--parchemin);background:radial-gradient(1200px 700px at 50% -10%,#4a2f18,var(--cuir) 60%);line-height:1.6}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  header{padding:20px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.logo{font-family:Cinzel,serif;font-weight:700;color:var(--or);font-size:1.2rem;letter-spacing:1px}header a,footer a{color:var(--or);text-decoration:none;font-family:Cinzel,serif}header a:hover,footer a:hover{text-decoration:underline}
+  .hero{text-align:center;padding:44px 0 32px}.hero h1,h2,h3{font-family:Cinzel,serif}.hero h1{font-size:clamp(2.1rem,5vw,3.4rem);color:var(--or);letter-spacing:2px;text-shadow:0 2px 20px rgba(212,168,75,.3)}.hero p{color:var(--parchemin2);font-style:italic;font-size:1.25rem;margin-top:12px}
+  .intro{max-width:720px;margin:0 auto;text-align:center;color:var(--parchemin2);font-size:1.08rem}
+  h2{text-align:center;color:var(--or);font-size:1.8rem;margin:48px 0 10px}h2+p.sub{text-align:center;color:var(--parchemin2);font-style:italic;margin-bottom:28px}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px;padding-bottom:20px}.shot{background:linear-gradient(160deg,var(--parchemin),var(--parchemin2));border-radius:10px;padding:14px;color:var(--encre);border-top:4px solid var(--or2);box-shadow:0 8px 20px rgba(0,0,0,.4)}.shot img{display:block;width:100%;height:auto;border-radius:5px;border:1px solid rgba(43,32,22,.3)}.shot h3{color:var(--sang);font-size:1.05rem;margin:12px 4px 2px}.shot p{margin:0 4px;color:#4d3825}.note{border-left:4px solid var(--or);background:rgba(0,0,0,.2);padding:16px 20px;margin:28px auto;color:var(--parchemin2);max-width:850px}.note strong{color:var(--or);font-family:Cinzel,serif}footer{text-align:center;padding:32px 0 42px;border-top:1px solid rgba(212,168,75,.3);margin-top:35px;color:var(--parchemin2)}
+  @media(max-width:600px){.wrap{padding:0 14px}.gallery{grid-template-columns:1fr}.hero{padding-top:28px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><span class="logo">🖋 Danoë Studio</span><a href="index.html">← Retour à l'accueil</a></header>
+  <main>
+    <section class="hero"><h1>La visite de l'atelier</h1><p>Une démonstration visuelle des interfaces de Danoë Studio.</p></section>
+    <p class="intro">Du premier réglage au registre final, découvrez le parcours réel de l'application sur un même manuscrit. Chaque image présente l'interface Flutter utilisée par l'auteur.</p>
+
+    <h2>⚙️ Préparer le livre</h2><p class="sub">Donner au manuscrit son identité et sa structure.</p>
+    <section class="gallery">
+      <article class="shot"><img src="demo/01-reglages.png" alt="Écran Réglages de Danoë Studio"><h3>01 · Réglages</h3><p>Formats, dossiers et paramètres de production.</p></article>
+      <article class="shot"><img src="demo/02-informations.png" alt="Écran Informations de Danoë Studio"><h3>02 · Informations</h3><p>Titre, auteur, édition et éléments liminaires.</p></article>
+      <article class="shot"><img src="demo/03-organisation.png" alt="Écran Organisation de Danoë Studio"><h3>03 · Organisation</h3><p>Actes, chapitres et illustrations du manuscrit.</p></article>
+    </section>
+
+    <h2>✍️ Relire et produire</h2><p class="sub">Accompagner le texte jusqu'à ses formats de publication.</p>
+    <section class="gallery">
+      <article class="shot"><img src="demo/04-correction.png" alt="Écran Correction de Danoë Studio"><h3>04 · Correction</h3><p>Relecture assistée et suivi des corrections.</p></article>
+      <article class="shot"><img src="demo/05-production.png" alt="Écran Production de Danoë Studio"><h3>05 · Production</h3><p>Génération Word, PDF KDP et EPUB.</p></article>
+      <article class="shot"><img src="demo/06-lecture.png" alt="Écran Lecture de Danoë Studio"><h3>06 · Lecture</h3><p>Accès direct aux documents générés.</p></article>
+    </section>
+
+    <h2>📊 Contrôler et partager</h2><p class="sub">Suivre le livre et retrouver les ressources utiles.</p>
+    <section class="gallery">
+      <article class="shot"><img src="demo/07-registre.png" alt="Écran Registre de Danoë Studio"><h3>07 · Registre</h3><p>Mots, pages, chapitres et illustrations.</p></article>
+      <article class="shot"><img src="demo/08-contact.png" alt="Écran Contact de Danoë Studio"><h3>08 · Contact</h3><p>Liens, coordonnées et ressources de l'atelier.</p></article>
+    </section>
+
+    <div class="note"><strong>Un seul parcours, trois livrables :</strong> le texte courant est préparé pour Word, PDF KDP et EPUB, avec une structure éditoriale cohérente et une mise en page justifiée.</div>
+  </main>
+  <footer>© 2026 Danoë Studio — <a href="https://github.com/danoe78210/danoe_studio">Code source sur GitHub</a></footer>
+</div>
+</body>
+</html>

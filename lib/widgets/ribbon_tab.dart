@@ -71,18 +71,22 @@ class _RibbonTabState extends State<RibbonTab> {
                     alignment: Alignment.centerLeft,
                     child: Padding(
                       padding: const EdgeInsets.only(left: 18),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        if (widget.emoji != null &&
-                            widget.emoji!.isNotEmpty) ...[
-                          Text(widget.emoji!,
-                              style: const TextStyle(fontSize: 13)),
-                          const SizedBox(width: 6),
-                        ],
-                        Text(widget.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.visible,
-                            style: AntiqueTheme.labelRuban),
-                      ]),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          if (widget.emoji != null &&
+                              widget.emoji!.isNotEmpty) ...[
+                            Text(widget.emoji!,
+                                style: const TextStyle(fontSize: 13)),
+                            const SizedBox(width: 6),
+                          ],
+                          Text(widget.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.visible,
+                              style: AntiqueTheme.labelRuban),
+                        ]),
+                      ),
                     ),
                   ),
                 ),

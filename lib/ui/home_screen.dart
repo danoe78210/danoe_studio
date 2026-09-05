@@ -104,7 +104,10 @@ const List<String> kFormats = [
 ];
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.captureMode = false, this.initialPage = 0});
+
+  final bool captureMode;
+  final int initialPage;
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -216,6 +219,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+    _page = widget.initialPage;
     _flip.addListener(
         () => setState(() => _turnT = Curves.easeInOut.transform(_flip.value)));
     _flip.addStatusListener((s) {
@@ -262,6 +266,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   void _allerA(int i) {
     if (_turning || i == _page) return;
+    if (widget.captureMode) {
+      setState(() => _page = i);
+      return;
+    }
     setState(() {
       _depuis = _page;
       _cible = i;
@@ -1092,11 +1100,13 @@ class _HomeScreenState extends State<HomeScreen>
                         active: _busy))),
             Expanded(
                 flex: narrow ? 1 : 6, child: RepaintBoundary(child: _livre())),
-            const SizedBox(height: 10),
-            if (narrow)
-              SizedBox(height: 96, child: RepaintBoundary(child: _console()))
-            else
-              Expanded(flex: 4, child: RepaintBoundary(child: _console())),
+            if (!widget.captureMode) ...[
+              const SizedBox(height: 10),
+              if (narrow)
+                SizedBox(height: 96, child: RepaintBoundary(child: _console()))
+              else
+                Expanded(flex: 4, child: RepaintBoundary(child: _console())),
+            ],
           ]));
     });
   }
