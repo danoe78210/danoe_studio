@@ -18,7 +18,7 @@
   .intro{max-width:720px;margin:0 auto;text-align:center;color:var(--parchemin2);font-size:1.08rem}
   h2{text-align:center;color:var(--or);font-size:1.8rem;margin:48px 0 10px}h2+p.sub{text-align:center;color:var(--parchemin2);font-style:italic;margin-bottom:28px}
   .gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:22px;padding-bottom:20px}.shot{background:linear-gradient(160deg,var(--parchemin),var(--parchemin2));border-radius:10px;padding:14px;color:var(--encre);border-top:4px solid var(--or2);box-shadow:0 8px 20px rgba(0,0,0,.4)}.zoom-trigger{display:block;width:100%;padding:0;border:0;background:transparent;cursor:zoom-in}.shot img{display:block;width:100%;height:auto;border-radius:5px;border:1px solid rgba(43,32,22,.3)}.zoom-trigger:focus-visible{outline:3px solid var(--or);outline-offset:4px;border-radius:6px}.shot h3{color:var(--sang);font-size:1.05rem;margin:12px 4px 2px}.shot p{margin:0 4px;color:#4d3825}.note{border-left:4px solid var(--or);background:rgba(0,0,0,.2);padding:16px 20px;margin:28px auto;color:var(--parchemin2);max-width:850px}.note strong{color:var(--or);font-family:Cinzel,serif}footer{text-align:center;padding:32px 0 42px;border-top:1px solid rgba(212,168,75,.3);margin-top:35px;color:var(--parchemin2)}
-  .lightbox{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:28px;background:rgba(20,10,4,.94);opacity:0;pointer-events:none;transition:opacity .2s}.lightbox.is-open{opacity:1;pointer-events:auto}.lightbox img{max-width:min(94vw,1500px);max-height:88vh;width:auto;height:auto;object-fit:contain;border:2px solid var(--or);box-shadow:0 18px 60px rgba(0,0,0,.7)}.lightbox button{position:absolute;border:1px solid var(--or);background:var(--cuir2);color:var(--or);font:700 1.2rem Cinzel,serif;width:44px;height:44px;border-radius:6px;cursor:pointer}.lightbox button:hover,.lightbox button:focus-visible{background:var(--or);color:var(--encre);outline:none}.lightbox-close{top:20px;right:24px}.lightbox-prev{left:24px}.lightbox-next{right:24px}.lightbox-caption{position:absolute;bottom:22px;color:var(--parchemin2);font-family:Cinzel,serif;text-align:center}.no-scroll{overflow:hidden}
+  .lightbox{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:28px;background:rgba(20,10,4,.94);opacity:0;pointer-events:none;transition:opacity .2s}.lightbox.is-open{opacity:1;pointer-events:auto}.lightbox img{max-width:min(94vw,1500px);max-height:88vh;width:auto;height:auto;object-fit:contain;border:2px solid var(--or);box-shadow:0 18px 60px rgba(0,0,0,.7);transform:scale(1);transition:transform .18s;cursor:zoom-in}.lightbox.is-zoomed img{cursor:zoom-out}.lightbox button{position:absolute;border:1px solid var(--or);background:var(--cuir2);color:var(--or);font:700 1.2rem Cinzel,serif;width:44px;height:44px;border-radius:6px;cursor:pointer}.lightbox button:hover,.lightbox button:focus-visible{background:var(--or);color:var(--encre);outline:none}.lightbox-close{top:20px;right:24px}.lightbox-prev{left:24px}.lightbox-next{right:24px}.lightbox-zoom-in{right:24px;top:76px}.lightbox-zoom-out{right:24px;top:128px}.lightbox-caption{position:absolute;bottom:22px;color:var(--parchemin2);font-family:Cinzel,serif;text-align:center}.no-scroll{overflow:hidden}
   @media(max-width:600px){.wrap{padding:0 14px}.gallery{grid-template-columns:1fr}.hero{padding-top:28px}}
 </style>
 </head>
@@ -53,6 +53,8 @@
   </main>
   <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Capture agrandie">
     <button class="lightbox-close" type="button" aria-label="Fermer">×</button>
+    <button class="lightbox-zoom-in" type="button" aria-label="Agrandir">+</button>
+    <button class="lightbox-zoom-out" type="button" aria-label="Réduire">−</button>
     <button class="lightbox-prev" type="button" aria-label="Capture précédente">‹</button>
     <img id="lightbox-image" src="" alt="">
     <button class="lightbox-next" type="button" aria-label="Capture suivante">›</button>
@@ -66,6 +68,7 @@
   const lightboxImage = document.getElementById('lightbox-image');
   const caption = document.getElementById('lightbox-caption');
   let activeIndex = 0;
+  let zoomScale = 1;
   let previousFocus;
 
   function showCapture(index) {
@@ -75,6 +78,9 @@
     lightboxImage.src = image.src;
     lightboxImage.alt = image.alt;
     caption.textContent = trigger.dataset.caption || image.alt;
+    zoomScale = 1;
+    lightboxImage.style.transform = 'scale(1)';
+    lightbox.classList.remove('is-zoomed');
   }
 
   function openLightbox(index) {
@@ -104,12 +110,23 @@
   lightbox.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
   lightbox.querySelector('.lightbox-prev').addEventListener('click', () => showCapture(activeIndex - 1));
   lightbox.querySelector('.lightbox-next').addEventListener('click', () => showCapture(activeIndex + 1));
+  function changeZoom(amount) {
+    zoomScale = Math.min(3, Math.max(1, zoomScale + amount));
+    lightboxImage.style.transform = `scale(${zoomScale})`;
+    lightbox.classList.toggle('is-zoomed', zoomScale > 1);
+  }
+  lightbox.querySelector('.lightbox-zoom-in').addEventListener('click', () => changeZoom(.25));
+  lightbox.querySelector('.lightbox-zoom-out').addEventListener('click', () => changeZoom(-.25));
+  lightboxImage.addEventListener('dblclick', () => changeZoom(zoomScale > 1 ? -2 : 1));
+  lightboxImage.addEventListener('wheel', event => { event.preventDefault(); changeZoom(event.deltaY < 0 ? .25 : -.25); }, {passive:false});
   lightbox.addEventListener('click', event => { if (event.target === lightbox) closeLightbox(); });
   document.addEventListener('keydown', event => {
     if (!lightbox.classList.contains('is-open')) return;
     if (event.key === 'Escape') closeLightbox();
     if (event.key === 'ArrowLeft') showCapture(activeIndex - 1);
     if (event.key === 'ArrowRight') showCapture(activeIndex + 1);
+    if (event.key === '+' || event.key === '=') changeZoom(.25);
+    if (event.key === '-' || event.key === '_') changeZoom(-.25);
   });
 </script>
 </body>
