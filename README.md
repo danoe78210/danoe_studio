@@ -1,6 +1,6 @@
 # 🖋️ Danoë Studio — Machine à romans pour écrivains
 
-**Version 3.5.0** · Windows 10/11 · Gratuit · Version autonome disponible
+**Version 3.6.0** · Windows 10/11 · Gratuit · Version autonome disponible
 
 Danoë Studio transforme vos chapitres Markdown en livres brochés professionnels conformes **Amazon KDP** : Word (.docx), PDF KDP et EPUB 3, avec lettrines, en-têtes, table des matières dynamique et images 300 DPI.
 
@@ -10,13 +10,29 @@ Danoë Studio transforme vos chapitres Markdown en livres brochés professionnel
 
 ## 📥 Téléchargement
 
-👉 **[Télécharger la version Windows autonome v3.5.0](https://github.com/danoe78210/danoe_studio/releases/download/v3.5.0/Danoestudio_Autonome_Windows_v3.5.0.zip)**
+👉 **[Télécharger la version Windows autonome v3.6.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.6.0)**
 
 La version autonome contient l’application Windows, le runtime Flutter, Python 3.12 et les dépendances du backend. **Aucun téléchargement de Flutter ou Python n’est nécessaire.**
 
-Décompressez `Danoestudio_Autonome_Windows_v3.5.0.zip` et lancez `danoestudio.exe`.
+Téléchargez l’archive disponible dans la [Release v3.6.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.6.0), décompressez-la puis lancez `danoestudio.exe`.
 
-Une archive portable plus légère, sans Python embarqué, est également disponible dans la [Release v3.5.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.5.0).
+Une archive portable plus légère, sans Python embarqué, est également disponible dans cette release.
+
+---
+
+## ✨ Nouveautés v3.6.0
+
+### 📚 Génération éditoriale consolidée
+- Générateurs Word, PDF KDP et EPUB alignés sur la structure éditoriale commune.
+- Texte courant justifié dans les trois formats, avec alignements spécifiques conservés pour les titres et éléments liminaires.
+- Métadonnées Word et PDF renseignées avec le titre et l’auteur.
+- PDF direct au format 6 × 9 pouces, à pagination paire et avec couche texte exploitable.
+- EPUB validé avec `mimetype`, manifest, spine, navigation et images référencées correctement.
+
+### 🧹 Qualité du contenu
+- Correction des fragments textuels corrompus dans les chapitres générés.
+- Harmonisation des libellés et de la numérotation du tome.
+- Validation des livrables générés par contrôles automatisés.
 
 ---
 
@@ -98,8 +114,8 @@ Les fichiers générés sont placés dans `backend/export/`. Le bouton **Fermer 
 cd backend
 python generer_roman.py             # Word (mode exact)
 python generer_roman.py --rapide    # mode rapide
-python generer_pdf_direct.py        # PDF (conversion Word→PDF)
-python generer_pdf_direct.py --direct
+python generer_pdf_direct.py        # PDF KDP direct
+python generer_pdf_direct.py --direct # PDF depuis Word si nécessaire
 python generer_ebook.py             # EPUB 3
 python appliquer_correctif.py       # correctifs idempotents
 ```
@@ -148,6 +164,7 @@ Dans l’archive autonome distribuée, le runtime Python est placé dans `python
 
 | Version | Apports |
 |---|---|
+| **v3.6.0** | Générateurs Word/PDF/EPUB consolidés, texte justifié, validations KDP et corrections éditoriales |
 | **v3.5.0** | Version Windows autonome, plume de progression, fermeture avec nettoyage du cache |
 | **v3.3** | Registre affiché, compilation Flutter réparée, correctifs idempotents |
 | v3.2 | Registre fiable, EPUB export/, parité consolidée, robustesse |
