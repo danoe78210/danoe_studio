@@ -431,6 +431,7 @@ def reordonner_structure_word_file(chemin):
         elif low.startswith('préface'): cle = 'preface'
         elif low.startswith('postface'): cle = 'postface'
         elif low.startswith('remerciements'): cle = 'remerciements'
+        elif low.startswith('du même auteur'): cle = 'autres_livres'
         elif a_image(blk): cle = 'frontispice'
         elif tit_court and tit_court in t and '©' not in t:
             cle = 'titre' if (aut and aut.lower() in low) or len(t) > len(tit_court) + 8 else 'faux_titre'
@@ -513,7 +514,15 @@ def reordonner_structure_word_file(chemin):
     if ax['sommaire']: ordre.append('sommaire')
     ordre.append('preface')
     for cle in ordre:
-        if trouve.get(cle): ajouter(trouve[cle], 'impair' if cle not in ('copyright',) else 'pair')
+        if not trouve.get(cle):
+            continue
+        if cle == 'frontispice':
+            saut = 'pair'
+        elif cle in ('titre', 'copyright'):
+            saut = 'impair' if cle == 'titre' else 'pair'
+        else:
+            saut = 'impair'
+        ajouter(trouve[cle], saut)
     for i, blk in enumerate(contenu):
         ajouter(blk, 'impair' if i == 0 else None)
     for cle in ('postface', 'remerciements', 'autres_livres'):
@@ -1203,7 +1212,8 @@ def ajouter_chapitre(titre, items, sans_titre=False):
     premier = True
     for kind, texte in items:
         if kind == 'h1':
-            doc.add_page_break()
+            if not (sans_titre and premier):
+                doc.add_page_break()
             p = doc.add_paragraph()
             p.style = styles['TitreChapitre']
             run_style(p, texte, POLICE_TITRES, STYLE['taille_chap1'], True)
@@ -1267,7 +1277,7 @@ def ajouter_page_titre(infos):
 
 def ajouter_page_copyright(infos):
     doc.add_page_break()
-    ligne_vide(20)
+    ligne_vide(10)
     titre = infos[TITRE] or 'Titre du roman'
     auteur = infos[AUTEUR] or 'Auteur'
     annee = infos[ANNEE] or '2026'
@@ -1338,8 +1348,40 @@ def ajouter_page_epigraphe(infos):
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.paragraph_format.line_spacing = 1.0
+        p.paragraph_format.space_before = Pt(4)
         run_style(p, t, POLICE_CORPS, 12, italique=True)
     ligne_vide(8)
+
+
+def ajouter_page_faux_titre(infos):
+    ligne_vide(8)
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_style(p, infos[TITRE] or 'Titre du roman', POLICE_TITRES, 16, True)
+
+
+def chemin_frontispice(nom):
+    if not nom:
+        return None
+    chemin = os.path.join(DOSSIER_IMAGES, nom)
+    if os.path.isfile(chemin):
+        return chemin
+    for extension in ('.png', '.jpg', '.jpeg', '.webp', '.bmp'):
+        candidat = chemin + extension
+        if os.path.isfile(candidat):
+            return candidat
+    return None
+
+
+def ajouter_page_frontispice():
+    chemin = chemin_frontispice(lire_annexes().get('frontispice'))
+    if chemin:
+        ajouter_page_illustration(
+            chemin,
+            'Frontispice',
+            saut_avant=False,
+            centrage_vertical=True,
+        )
 
 # ─────────────────────────────────────────────
 # 9. TABLE DES MATIÈRES
@@ -1573,6 +1615,12 @@ def main():
           POLICE_LETTRINE + ' · interligne ' + format(INTERLIGNE, 'g') +
           ' (source : ' + STYLE.get('_source', '?') + ')')
 
+    doc.add_page_break()
+    doc.add_page_break()
+    ajouter_page_faux_titre(infos)
+    doc.add_page_break()
+    ajouter_page_frontispice()
+    doc.add_page_break()
     ajouter_page_titre(infos)
     ajouter_page_copyright(infos)
     ajouter_page_avertissement(infos)
@@ -1756,6 +1804,10 @@ def main():
         nom += '_' + slug(infos[SOUS_TITRE])
     _doss = os.path.join(BASE, 'export'); os.makedirs(_doss, exist_ok=True)
     nom_fichier = os.path.join(_doss, nom + '_KDP.docx')
+    doc.core_properties.title = infos[TITRE] or ''
+    doc.core_properties.subject = infos[SOUS_TITRE] or ''
+    doc.core_properties.author = infos[AUTEUR] or ''
+    doc.core_properties.keywords = 'KDP, roman, Danoë Studio'
     nom_fichier = enregistrer_docx_securise(doc, nom_fichier)
 
     # ── v2.9.4 : convergence des marges sur le nombre de pages RÉEL ──
@@ -1804,6 +1856,7 @@ def main():
     except Exception:
         pass
     try:
+        nom_fichier = enregistrer_docx_securise(doc, nom_fichier)
         reordonner_structure_word_file(nom_fichier)
         print('   📚 Structure éditoriale appliquée au Word.')
     except Exception as e:

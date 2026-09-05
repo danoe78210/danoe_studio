@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/antique_theme.dart';
 
 /// Ruban marque-page (menu gauche) avec hover + accessibilité.
@@ -28,6 +29,7 @@ class RibbonTab extends StatefulWidget {
 
 class _RibbonTabState extends State<RibbonTab> {
   bool _hover = false;
+  bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
@@ -39,31 +41,50 @@ class _RibbonTabState extends State<RibbonTab> {
         onEnter: (_) => setState(() => _hover = true),
         onExit: (_) => setState(() => _hover = false),
         cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: widget.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            width: widget.width,
-            height: widget.height,
-            transform: Matrix4.identity()
-              ..translateByDouble(_hover ? 3.0 : 0.0, 0, 0, 1),
-            child: CustomPaint(
-              painter: _RibbonPainter(
-                  color: widget.color, active: widget.active, hovered: _hover),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 18),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    if (widget.emoji != null && widget.emoji!.isNotEmpty) ...[
-                      Text(widget.emoji!, style: const TextStyle(fontSize: 13)),
-                      const SizedBox(width: 6),
-                    ],
-                    Text(widget.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.visible,
-                        style: AntiqueTheme.labelRuban),
-                  ]),
+        child: FocusableActionDetector(
+          onShowFocusHighlight: (focused) => setState(() => _focused = focused),
+          child: Focus(
+            onKeyEvent: (_, event) {
+              if (event is KeyDownEvent &&
+                  (event.logicalKey == LogicalKeyboardKey.enter ||
+                      event.logicalKey == LogicalKeyboardKey.space)) {
+                widget.onTap();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: GestureDetector(
+              key: const ValueKey('ribbon-tab-focus'),
+              onTap: widget.onTap,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                width: widget.width,
+                height: widget.height,
+                transform: Matrix4.identity()
+                  ..translateByDouble(_hover ? 3.0 : 0.0, 0, 0, 1),
+                child: CustomPaint(
+                  painter: _RibbonPainter(
+                      color: widget.color,
+                      active: widget.active,
+                      hovered: _hover || _focused),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 18),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (widget.emoji != null &&
+                            widget.emoji!.isNotEmpty) ...[
+                          Text(widget.emoji!,
+                              style: const TextStyle(fontSize: 13)),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(widget.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.visible,
+                            style: AntiqueTheme.labelRuban),
+                      ]),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -98,7 +119,7 @@ class _RibbonPainter extends CustomPainter {
         Paint()
           ..color = hovered
               ? AntiqueTheme.candleGlow.withValues(alpha: 0.40)
-              : const Color(0x88000000)
+              : AntiqueTheme.inkBlack.withValues(alpha: 0.53)
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, hovered ? 7 : 3));
 
     // Corps du ruban
@@ -122,7 +143,7 @@ class _RibbonPainter extends CustomPainter {
           ..strokeWidth = 1.2
           ..color = (active || hovered)
               ? AntiqueTheme.agedGold
-              : const Color(0x66D9B44A));
+              : AntiqueTheme.agedGold.withValues(alpha: 0.4));
   }
 
   @override

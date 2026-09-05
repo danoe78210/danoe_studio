@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'theme/antique_theme.dart';
 import 'ui/home_screen.dart';
 
 void main() {
@@ -13,17 +14,7 @@ class DanoeStudioApp extends StatelessWidget {
     return MaterialApp(
       title: 'Danoë Studio',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF101322),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF3D6BFF),
-          secondary: Color(0xFFE0B458),
-          surface: Color(0xFF171B2E),
-          error: Color(0xFFFF6B6B),
-        ),
-        useMaterial3: true,
-      ),
+      theme: AntiqueTheme.theme,
       home: const HomeScreen(),
     );
   }

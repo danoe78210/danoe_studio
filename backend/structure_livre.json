@@ -14,19 +14,21 @@
     {
       "id": "frontispice",
       "type": "image",
-      "saut": "impair",
+      "saut": "pair",
       "optionnel": true,
+      "pairs_with_next": true,
       "source": "champ:frontispice"
     },
     {
       "id": "page_titre",
       "type": "titre",
-      "saut": "impair"
+      "saut": "impair",
+      "pairs_with_next": true
     },
     {
       "id": "copyright",
       "type": "copyright",
-      "saut": "next"
+      "saut": "pair"
     },
     {
       "id": "dedicace",
@@ -75,6 +77,14 @@
       "optionnel": true,
       "source": "champ:remerciements",
       "titre": "Remerciements"
+    },
+    {
+      "id": "autres_livres",
+      "type": "texte",
+      "saut": "impair",
+      "optionnel": true,
+      "source": "champ:autres_livres",
+      "titre": "Du même auteur"
     }
   ]
 }

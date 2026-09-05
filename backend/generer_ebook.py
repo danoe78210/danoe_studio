@@ -50,6 +50,8 @@ try:
     from PIL import Image as PILImage, ImageDraw, ImageFont
 except ImportError:
     PILImage = None
+    ImageDraw = None
+    ImageFont = None
     print('   ⚠️  Pillow absent : génération de couverture désactivée.')
 
 try:
@@ -59,12 +61,18 @@ except Exception:
     cs = None
     JSON_OK = False
 
+try:
+    from structure_commune import plan_livre
+except ImportError:
+    plan_livre = None
+
 if getattr(sys, 'frozen', False):
     BASE = os.path.dirname(sys.executable)
 else:
     BASE = os.path.dirname(os.path.abspath(__file__))
 
 DOSSIER_IMAGES = os.path.join(BASE, 'Images')
+DOSSIER_CHAPITRES = os.path.join(BASE, 'Chapitres')
 CHEMIN_CONFIG = os.path.join(BASE, 'Configuration_roman.xlsx')
 
 # v1.6 : code de retour exposé au module appelant (interface ou CLI)
@@ -251,9 +259,21 @@ def _md_to_html(txt):
     for ln in txt.split('\n'):
         ln = ln.rstrip()
         if not ln.strip() or ln.startswith('# '): continue
+        ln = html_escape(normaliser_texte_editorial(ln))
         if ln.startswith('## '): out.append('<h2>%s</h2>' % ln[3:].strip())
         else: out.append('<p>%s</p>' % ln)
     return ''.join(out)
+
+
+def lire_fichier_markdown(chemin):
+    """Lit un module éditorial Markdown en UTF-8."""
+    with open(chemin, encoding='utf-8') as fichier:
+        return fichier.read()
+
+
+def convertir_markdown_html(txt):
+    """Convertit le sous-ensemble Markdown déjà utilisé par l'EPUB."""
+    return _md_to_html(txt)
 
 def trouver_docx():
     cands = (glob.glob(os.path.join(BASE, '*_KDP.docx'))
@@ -367,12 +387,26 @@ def extraire_images(docx_path):
 def html_escape(s):
     return (str(s).replace('&', '&amp;').replace('<', '&lt;')
             .replace('>', '&gt;').replace('"', '&quot;'))
+def normaliser_texte_editorial(texte):
+    """Corrige les corruptions connues héritées des anciens exports DOCX."""
+    texte = str(texte)
+    remplacements = {
+        'C’espersiste…oure': 'Ça persiste… J’ouvre',
+        'quand je cris': 'quand je crie',
+        'laiss, maisss': 'laisse, mais',
+        'j, maisçoive': 'je perçoive',
+        'messager, maissts…leleront': 'messagers. Ils circuleront',
+        'conv ettant,ent…attirent': 'convergent et s’attirent',
+    }
+    for ancien, nouveau in remplacements.items():
+        texte = texte.replace(ancien, nouveau)
+    return re.sub(r'\bTome\s*1\b', 'Tome 1', texte)
 
 
 def runs_to_html(paragraph):
     parts = []
     for run in paragraph.runs:
-        t = html_escape(run.text)
+        t = html_escape(normaliser_texte_editorial(run.text))
         if not t:
             continue
         if run.bold and run.italic:
@@ -416,7 +450,7 @@ def construire_ebook(docx_path, infos, images, sortie):
     doc = Document(docx_path)
 
     titre = infos[TITRE] or 'Roman'
-    sous_titre = infos[SOUS_TITRE] or ''
+    sous_titre = normaliser_texte_editorial(infos[SOUS_TITRE] or '')
     auteur = infos[AUTEUR] or 'Auteur'
     annee = infos[ANNEE] or str(datetime.now().year)
     ident = infos[ISBN] or f'urn:uuid:ebook-{int(time.time())}'
@@ -442,43 +476,42 @@ def construire_ebook(docx_path, infos, images, sortie):
     if cover_data:
         add('cover-image', 'cover.jpg', 'image/jpeg', cover_data, 'cover-image')
     _ax0 = lire_annexes()
-    if _ax0.get('frontispice'):
-        _fp = os.path.join(DOSSIER_IMAGES, _ax0['frontispice'])
-        if not os.path.isfile(_fp):
-            for _ext in ('.png', '.jpg', '.jpeg', '.webp', '.bmp'):
-                if os.path.isfile(_fp + _ext): _fp += _ext; break
-        if os.path.isfile(_fp) and PILImage is not None:
-            try:
-                with PILImage.open(_fp) as im:
-                    _buf = io.BytesIO(); im.convert('RGB').save(_buf, 'JPEG', quality=88)
-                add('frontispice-img', 'images/frontispice.jpg', 'image/jpeg', _buf.getvalue())
-                add_page('frontispice', 'frontispice.xhtml', 'Frontispice',
-                         '<div class="planche"><p><img src="images/frontispice.jpg" alt="frontispice"/></p></div>')
-            except Exception as e:
-                print(f'   ⚠️ Frontispice ignoré ({_fp}) : {e}')
+    plan = plan_livre(infos, _ax0) if plan_livre else []
+    modules_actifs = {module['id'] for module in plan}
 
     # ── Pages liminaires (structure éditoriale française) ──
-    
-    # 1. Page de garde (blanche)
-    add_page('garde', 'garde.xhtml', 'Page de garde', '<div class="page-garde"></div>')
-    
-    # 2. Faux-titre
+
+    # 1. Faux-titre
     corps_faux_titre = f'<div class="faux-titre"><h1>{html_escape(titre)}</h1></div>'
     add_page('faux-titre', 'faux-titre.xhtml', 'Faux-titre', corps_faux_titre)
     
-    # 3. Frontispice
-    frontispice = infos.get('frontispice') or infos.get('Frontispice')
+    # 2. Frontispice optionnel
+    frontispice = _ax0.get('frontispice') if 'frontispice' in modules_actifs else None
     if frontispice:
         img_path = os.path.join(DOSSIER_IMAGES, frontispice)
-        if os.path.exists(img_path):
+        if not os.path.isfile(img_path):
+            for ext in ('.png', '.jpg', '.jpeg', '.webp', '.bmp'):
+                if os.path.isfile(img_path + ext):
+                    img_path += ext
+                    break
+        if os.path.isfile(img_path):
             # Copier l'image dans l'EPUB
+            ext = os.path.splitext(img_path)[1].lower()
             img_data = open(img_path, 'rb').read()
-            img_id = f'frontispice-{int(time.time())}'
-            add(img_id, f'images/{frontispice}', 'image/jpeg' if frontispice.lower().endswith(('.jpg', '.jpeg')) else 'image/png', img_data)
-            corps_frontispice = f'<div class="frontispice"><img src="images/{frontispice}" alt="Frontispice"/></div>'
+            if PILImage is not None:
+                with PILImage.open(img_path) as im:
+                    buffer = io.BytesIO()
+                    im.convert('RGB').save(buffer, 'JPEG', quality=88)
+                    img_data = buffer.getvalue()
+                ext = '.jpg'
+            img_href = 'images/frontispice' + ext
+            img_id = 'frontispice-img'
+            media = 'image/jpeg' if ext in ('.jpg', '.jpeg') else 'image/png'
+            add(img_id, img_href, media, img_data)
+            corps_frontispice = f'<div class="frontispice"><img src="{img_href}" alt="Frontispice"/></div>'
             add_page('frontispice', 'frontispice.xhtml', 'Frontispice', corps_frontispice)
     
-    # 4. Page de titre
+    # 3. Page de titre
     corps_titre = '<div class="title-page"><h1>' + html_escape(titre.upper()) + '</h1>'
     if sous_titre:
         corps_titre += f'<p class="subtitle">{html_escape(sous_titre)}</p>'
@@ -488,7 +521,7 @@ def construire_ebook(docx_path, infos, images, sortie):
     corps_titre += '</div>'
     add_page('title', 'title.xhtml', titre, corps_titre, 'Page de titre')
     
-    # 5. Copyright
+    # 4. Copyright
     copyright_txt = infos[COPYRIGHT] or f'© {annee} {auteur}. Tous droits réservés.'
     lignes = [titre_complet, '', copyright_txt]
     if infos[ISBN]:
@@ -502,28 +535,25 @@ def construire_ebook(docx_path, infos, images, sortie):
         for l in lignes) + '</div>'
     add_page('copyright', 'copyright.xhtml', 'Mentions légales', corps)
     
-    # 6. Dédicace
+    # 5. Dédicace optionnelle
     if infos[DEDICACE]:
         corps = '<div class="dedication">' + ''.join(
             f'<p>{html_escape(l)}</p>' for l in infos[DEDICACE].splitlines() if l.strip()) + '</div>'
         add_page('dedicace', 'dedicace.xhtml', 'Dédicace', corps, 'Dédicace')
     
-    # 7. Épigraphe
+    # 6. Épigraphe optionnelle
     if infos[EPIGRAPHE]:
         corps = '<div class="epigraph">' + ''.join(
             f'<p>{html_escape(l)}</p>' for l in infos[EPIGRAPHE].splitlines() if l.strip()) + '</div>'
         add_page('epigraphe', 'epigraphe.xhtml', 'Épigraphe', corps, 'Épigraphe')
     
-    # 8. Table des matières
-    corps = '<div class="toc-page"><h1>Table des matières</h1><ul>'
-    for iid, lib in toc:
-        href = next(i['href'] for i in items if i['id'] == iid)
-        corps += f'<li><a href="{href}">{html_escape(lib)}</a></li>'
-    corps += '</ul></div>'
-    add_page('tdm', 'tdm.xhtml', 'Table des matières', corps, 'Table des matières')
-    
-    # 9. Préface
-    preface = infos.get('preface') or infos.get('Préface')
+    # 7. Sommaire visible unique, réservé avant de connaître les chapitres.
+    if 'sommaire' in modules_actifs:
+        add_page('tdm', 'tdm.xhtml', 'Table des matières',
+                 '<div class="toc-page"><h1>Table des matières</h1><ul></ul></div>')
+
+    # 8. Préface optionnelle
+    preface = _ax0.get('preface') if 'preface' in modules_actifs else None
     if preface:
         preface_path = os.path.join(DOSSIER_CHAPITRES, f"{preface}.md")
         if os.path.exists(preface_path):
@@ -603,8 +633,8 @@ def construire_ebook(docx_path, infos, images, sortie):
 
     # ── Pages finales ──
     
-    # 10. Postface
-    postface = infos.get('postface') or infos.get('Postface')
+    # 10. Postface optionnelle
+    postface = _ax0.get('postface') if 'postface' in modules_actifs else None
     if postface:
         postface_path = os.path.join(DOSSIER_CHAPITRES, f"{postface}.md")
         if os.path.exists(postface_path):
@@ -612,28 +642,31 @@ def construire_ebook(docx_path, infos, images, sortie):
             corps_postface = '<div class="postface"><h1>Postface</h1>' + convertir_markdown_html(contenu_postface) + '</div>'
             add_page('postface', 'postface.xhtml', 'Postface', corps_postface, 'Postface')
     
-    # 11. Remerciements
-    remerciements = infos.get('remerciements') or infos.get('Remerciements')
+    # 11. Remerciements optionnels
+    remerciements = _ax0.get('remerciements') if 'remerciements' in modules_actifs else None
     if remerciements:
         corps_remerciements = '<div class="remerciements"><h1>Remerciements</h1>' + ''.join(
             f'<p>{html_escape(l)}</p>' for l in remerciements.splitlines() if l.strip()) + '</div>'
         add_page('remerciements', 'remerciements.xhtml', 'Remerciements', corps_remerciements, 'Remerciements')
+
+    # Les modules de fin restent séquentiels: aucune page blanche papier ne
+    # doit être injectée dans la spine EPUB reflowable.
+    autres_livres = _ax0.get('autres_livres') if 'autres_livres' in modules_actifs else None
+    if autres_livres:
+        corps_autres = '<div class="autres-livres"><h1>Du même auteur</h1>' + ''.join(
+            f'<p>{html_escape(l)}</p>' for l in autres_livres.splitlines() if l.strip()) + '</div>'
+        add_page('autres-livres', 'autres-livres.xhtml', 'Du même auteur',
+                 corps_autres, 'Du même auteur')
     
-    # ── Page TDM HTML visible (si option Sommaire cochée) ──
-    if _ax0.get('sommaire', True):
+    # ── Page TDM HTML visible, placée avant la préface ──
+    if 'sommaire' in modules_actifs:
         corps = '<div class="toc-page"><h1>Table des matières</h1><ul>'
         for iid, lib in toc:
             href = next(i['href'] for i in items if i['id'] == iid)
             corps += f'<li><a href="{href}">{html_escape(lib)}</a></li>'
         corps += '</ul></div>'
-        add_page('tdm', 'tdm.xhtml', 'Table des matières', corps, 'Table des matières')
-        # Réordonnancement de l'ordre de lecture : épigraphe -> TDM -> préface
-        if 'tdm' in spine:
-            spine.remove('tdm')
-            if 'preface' in spine:
-                spine.insert(spine.index('preface'), 'tdm')
-            elif 'epigraphe' in spine:
-                spine.insert(spine.index('epigraphe') + 1, 'tdm')
+        tdm = next(i for i in items if i['id'] == 'tdm')
+        tdm['data'] = page_xhtml('Table des matières', corps)
     
     # ── nav.xhtml (EPUB 3) ──
     nav = ('<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n'
@@ -734,10 +767,17 @@ def verifier_epub(chemin):
             noms = z.namelist()
 
             if noms and noms[0] == 'mimetype' \
+                    and z.getinfo('mimetype').compress_type == zipfile.ZIP_STORED \
                     and z.read('mimetype') == b'application/epub+zip':
                 print('   ✅ mimetype conforme (1er, non compressé)')
             else:
                 print('   ⚠️  mimetype non conforme')
+                ok = False
+
+            if 'META-INF/container.xml' in noms and 'OEBPS/content.opf' in noms:
+                print('   ✅ container.xml et OPF présents')
+            else:
+                print('   ⚠️  container.xml ou OPF absent')
                 ok = False
 
             if 'OEBPS/toc.ncx' in noms:
@@ -762,6 +802,27 @@ def verifier_epub(chemin):
             print(f'   ✅ {len(imgs)} image(s) intégrée(s)' if imgs
                   else '   ⚠️  Aucune image intégrée')
             ok = ok and bool(imgs)
+
+            opf_root = ET.fromstring(z.read('OEBPS/content.opf'))
+            ns = {'opf': 'http://www.idpf.org/2007/opf'}
+            manifest = {
+                item.attrib['id']: item.attrib['href']
+                for item in opf_root.findall('opf:manifest/opf:item', ns)
+            }
+            spine_ids = [
+                item.attrib['idref']
+                for item in opf_root.findall('opf:spine/opf:itemref', ns)
+            ]
+            refs_ok = all(item_id in manifest for item_id in spine_ids)
+            refs_ok = refs_ok and all(
+                'OEBPS/' + href in noms for href in manifest.values()
+                if not href.startswith('http')
+            )
+            if refs_ok:
+                print('   ✅ Manifest et spine cohérents')
+            else:
+                print('   ⚠️  Manifest ou spine incohérent')
+                ok = False
 
             nb_xml_bad = 0
             for n in noms:
@@ -808,7 +869,7 @@ def main(docx_override=None):
         slug_titre += '_' + re.sub(r'[^\w]+', '_', infos[SOUS_TITRE].strip())
     dossier_sortie = os.path.join(BASE, 'export')
     os.makedirs(dossier_sortie, exist_ok=True)
-    sortie = os.path.join(dossier_sortie, f'{slug_titre}_ebook.epub')
+    sortie = os.path.join(dossier_sortie, 'Les_Schattenjagers_KDP.epub')
 
     print('   📖 Construction de l\'EPUB…')
     try:
@@ -833,19 +894,6 @@ def main(docx_override=None):
     return 1
 
 
-# Le code de retour reste exposé lorsqu'il est importé par l'interface.
-# En exécution CLI, il doit toutefois être transmis au processus.
-if __name__ == '__main__':
-    if '--docx' in sys.argv:
-        idx = sys.argv.index('--docx')
-        if idx + 1 < len(sys.argv):
-            EBOOK_CODE = main(sys.argv[idx + 1])
-    elif '--cover-only' in sys.argv:
-        couverture_octets()
-        EBOOK_CODE = 0
-    else:
-        EBOOK_CODE = main()
-    raise SystemExit(EBOOK_CODE)
 def _normaliser_cles(d):
     """Recadre les clés (espaces finaux du JSON du menu Informations)."""
     if not isinstance(d, dict):
@@ -858,3 +906,18 @@ def _infos_de(d):
     d = _normaliser_cles(d or {})
     v = d.get('informations')
     return v if isinstance(v, dict) else {}
+
+
+# Le point d'entrée vient après les helpers de configuration afin que le
+# lancement CLI et l'import par Flutter exécutent exactement le même chemin.
+if __name__ == '__main__':
+    if '--docx' in sys.argv:
+        idx = sys.argv.index('--docx')
+        if idx + 1 < len(sys.argv):
+            EBOOK_CODE = main(sys.argv[idx + 1])
+    elif '--cover-only' in sys.argv:
+        couverture_octets()
+        EBOOK_CODE = 0
+    else:
+        EBOOK_CODE = main()
+    raise SystemExit(EBOOK_CODE)

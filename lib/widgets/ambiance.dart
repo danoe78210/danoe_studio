@@ -6,8 +6,12 @@ import '../theme/antique_theme.dart';
 class CandleGlow extends StatefulWidget {
   final Alignment alignment;
   final double size;
+  final double intensity;
   const CandleGlow(
-      {super.key, this.alignment = Alignment.center, this.size = 500});
+      {super.key,
+      this.alignment = Alignment.center,
+      this.size = 500,
+      this.intensity = 1});
 
   @override
   State<CandleGlow> createState() => _CandleGlowState();
@@ -31,7 +35,7 @@ class _CandleGlowState extends State<CandleGlow>
         animation: _c,
         builder: (_, __) {
           final t = _c.value;
-          final opacity = 0.12 + 0.08 * t;
+          final opacity = (0.12 + 0.08 * t) * widget.intensity;
           final scale = 1.0 + 0.06 * t;
           return Align(
               alignment: widget.alignment,
@@ -137,16 +141,25 @@ class Vignette extends StatelessWidget {
 /// Couche d'ambiance : translucide, non-interactive, isolée (RepaintBoundary).
 /// (Pas d'ExcludeFromSemantics ici pour garantir la compilation.)
 class Ambiance extends StatelessWidget {
-  const Ambiance({super.key});
+  final bool subdued;
+  const Ambiance({super.key, this.subdued = false});
 
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: IgnorePointer(
           child: Stack(children: [
-        const CandleGlow(alignment: Alignment(0.7, -0.6), size: 700),
-        const CandleGlow(alignment: Alignment(-0.7, 0.7), size: 600),
-        const Positioned.fill(child: DustParticles()),
+        CandleGlow(
+          alignment: Alignment(0.7, -0.6),
+          size: 700,
+          intensity: subdued ? 0.45 : 1,
+        ),
+        CandleGlow(
+          alignment: Alignment(-0.7, 0.7),
+          size: 600,
+          intensity: subdued ? 0.45 : 1,
+        ),
+        Positioned.fill(child: DustParticles(count: subdued ? 10 : 28)),
         const Positioned.fill(child: Vignette()),
       ])),
     );

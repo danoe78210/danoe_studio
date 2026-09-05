@@ -23,12 +23,12 @@ class ParchmentCard extends StatelessWidget {
         border: Border.all(color: AntiqueTheme.leatherWarm, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
+            color: AntiqueTheme.inkBlack.withValues(alpha: 0.4),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
-          const BoxShadow(
-            color: Color(0x22000000),
+          BoxShadow(
+            color: AntiqueTheme.inkBlack.withValues(alpha: 0.133333),
             blurRadius: 2,
             offset: Offset(0, 1),
           ),

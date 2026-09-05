@@ -11,6 +11,7 @@ Dépendances : pip install reportlab pypdf Pillow openpyxl
 Usage : python generer_pdf_direct.py
 """
 import os, re, sys, glob, io, json
+from copy import deepcopy
 BASE = os.path.dirname(os.path.abspath(__file__))
 CHEMIN_CONFIG = os.path.join(BASE, 'Configuration_roman.xlsx')
 CHEMIN_CONFIG_JSON = os.path.join(BASE, 'Configuration_roman.json')
@@ -394,7 +395,8 @@ def generer(safe=False):
     st_sep = ParagraphStyle('sep', fontName=F['c'], fontSize=TC, alignment=TA_CENTER,
                             spaceBefore=TC, spaceAfter=TC)
     st_leg = ParagraphStyle('leg', fontName=F['i'], fontSize=9, alignment=TA_CENTER, spaceBefore=6)
-    st_lim = ParagraphStyle('lim', fontName=F['c'], fontSize=9, leading=12)
+    st_lim = ParagraphStyle('lim', fontName=F['c'], fontSize=9, leading=12,
+                            alignment=TA_JUSTIFY)
     st_toc = ParagraphStyle('toc', fontName=F['c'], fontSize=10, leading=16)
 
     def para(texte, style, gras_debut=False):
@@ -444,7 +446,7 @@ def generer(safe=False):
     _haut_utile = H - 3.8 * cm
     lim = []
     # 1. Page de garde (blanche)
-    lim += [Spacer(1, 1 * cm), PageBreak()]
+    lim += [Spacer(1, 1 * cm), PageBreak(), PageBreak()]
     # 2. Faux-titre (titre seul, petits caractères)
     lim += [Spacer(1, 7 * cm), Paragraph(escape(_tit), st_lim), PageBreak()]
     # 3. Frontispice (image)
@@ -455,9 +457,13 @@ def generer(safe=False):
                 if os.path.isfile(_fp + _ext): _fp += _ext; break
         if os.path.isfile(_fp):
             try:
-                _img = RLImage(_fp, width=12 * cm, height=16 * cm); _img.hAlign = 'CENTER'
+                _fp_hd = image_haute_definition(_fp, 12.0)
+                _img = RLImage(_fp_hd, width=12 * cm, height=16 * cm); _img.hAlign = 'CENTER'
                 lim += [Spacer(1, 2 * cm), _img]
             except Exception: pass
+        lim.append(PageBreak())
+    else:
+        # Le titre reste recto même lorsque le frontispice optionnel manque.
         lim.append(PageBreak())
     # 4. Page de titre (titre, sous-titre, auteur)
     lim.append(Paragraph(escape(_tit.upper()), st_acte))
@@ -506,8 +512,12 @@ def generer(safe=False):
         lim.append(Spacer(1, max(0, (_haut_utile - _h_e) / 2)))
         lim += _epi
         lim.append(PageBreak())
-    segments.append({'type': 'lim', 'story': lim, 'entete': None})
-    # 8. Préface (segment séparé ; la TDM sera insérée juste avant)
+    segments.append({'type': 'lim', 'story': lim, 'entete': None,
+                     'force_start': False})
+    if _ax.get('sommaire', True):
+        segments.append({'type': 'sommaire', 'story': [], 'entete': None,
+                         'force_start': True})
+    # 8. Préface (segment séparé, après la TDM si elle est activée)
     if _ax.get('preface'):
         _pc = os.path.join(BASE, 'Chapitres', _ax['preface'] + '.md')
         if os.path.isfile(_pc):
@@ -515,7 +525,8 @@ def generer(safe=False):
             for _ln in open(_pc, encoding='utf-8').read().split('\n'):
                 _ln = _ln.strip()
                 if _ln and not _ln.startswith('# '): _st.append(Paragraph(escape(_ln), st_lim))
-            segments.append({'type': 'preface', 'story': _st, 'entete': None})
+            segments.append({'type': 'preface', 'story': _st, 'entete': None,
+                             'force_start': True})
 
 
     for b in ORG:
@@ -536,10 +547,12 @@ def generer(safe=False):
                 st.append(Spacer(1, max(0, (H - 3.8 * cm - h_cm * cm) / 2)))
                 img = RLImage(ch_hd, width=w_cm * cm, height=h_cm * cm); img.hAlign = 'CENTER'; st.append(img)
                 if b.get('legende'): st.append(Paragraph(escape(b['legende']), st_leg))
-            segments.append({'type': 'image', 'story': st, 'entete': None})
+            segments.append({'type': 'image', 'story': st, 'entete': None,
+                             'force_start': True})
         elif b['type'] == 'acte':
             segments.append({'type': 'acte', 'titre': b['acte'], 'entete': None,
-                             'story': [Spacer(1, 4 * cm), Paragraph(escape(b['acte']), st_acte)]})
+                             'story': [Spacer(1, 4 * cm), Paragraph(escape(b['acte']), st_acte)],
+                             'force_start': True})
         else:
             pref_match = re.match(r'(\d+\.\d+)', b['fichier'])
             pref = pref_match.group(1) if pref_match else b['fichier']
@@ -564,7 +577,9 @@ def generer(safe=False):
                 else:
                     st.append(para(t, st_debut if premier else st_corps, gras_debut=premier))
                     premier = False
-            segments.append({'type': 'chapitre', 'titre': b['titre'], 'entete': b['titre'], 'story': st})
+            segments.append({'type': 'chapitre', 'titre': b['titre'],
+                             'entete': b['titre'], 'story': st,
+                             'force_start': True})
 
     if _ax.get('postface'):
         _pc = os.path.join(DOSSIER_CHAPITRES, _ax['postface'] + '.md')
@@ -574,17 +589,64 @@ def generer(safe=False):
                 _ln = _ln.strip()
                 if _ln and not _ln.startswith('# '):
                     _st.append(Paragraph(escape(_ln), st_lim))
-            segments.append({'type': 'postface', 'story': _st, 'entete': None})
+            segments.append({'type': 'postface', 'story': _st, 'entete': None,
+                             'force_start': True})
     if _ax.get('remerciements'):
         _st = [Paragraph('Remerciements', st_acte)]
         _st.extend(Paragraph(escape(_ln.strip()), st_lim)
                    for _ln in _ax['remerciements'].splitlines() if _ln.strip())
-        segments.append({'type': 'remerciements', 'story': _st, 'entete': None})
+        segments.append({'type': 'remerciements', 'story': _st, 'entete': None,
+                 'force_start': True})
     if _ax.get('autres_livres'):
         _st = [Paragraph('Du même auteur', st_acte)]
         _st.extend(Paragraph(escape('• ' + _ln.strip()), st_lim)
                    for _ln in _ax['autres_livres'].splitlines() if _ln.strip())
-        segments.append({'type': 'autres_livres', 'story': _st, 'entete': None})
+        segments.append({'type': 'autres_livres', 'story': _st, 'entete': None,
+                 'force_start': True})
+
+    # ── Planification de la TDM avant rendu final ──
+    def planifier_toc(toc_pages):
+        courant = 1
+        plan = []
+        for segment in segments:
+            if segment.get('force_start') and courant % 2 == 0:
+                courant += 1
+            if segment['type'] == 'sommaire':
+                courant += toc_pages
+                continue
+            pages = len(PdfReader(rendre(
+                deepcopy(segment['story']), W, H, MARGES,
+                {'F': F, 'entete': segment['entete'],
+                 'debut_num': 10 ** 9, 'pad': PAD}, courant - 1
+            )).pages)
+            if segment['type'] in ('acte', 'chapitre'):
+                plan.append((segment['titre'], courant))
+            courant += pages
+        return plan
+
+    def construire_toc(entrees):
+        story = [Spacer(1, 2 * cm), Paragraph(
+            'Table des matières', st_ch1), Spacer(1, 1 * cm)]
+        for titre, page in entrees:
+            pts = max(3, 70 - len(titre))
+            story.append(Paragraph(
+                f'{escape(titre)} {"." * pts} {page}', st_toc))
+        return story
+
+    if _ax.get('sommaire', True):
+        toc_pages = 1
+        for _ in range(2):
+            entrees = planifier_toc(toc_pages)
+            toc_buf = rendre(
+                construire_toc(entrees), W, H, MARGES,
+                {'F': F, 'entete': None, 'debut_num': 10 ** 9, 'pad': PAD}, 0)
+            nouveau_nombre = len(PdfReader(toc_buf).pages)
+            if nouveau_nombre == toc_pages:
+                break
+            toc_pages = nouveau_nombre
+        for segment in segments:
+            if segment['type'] == 'sommaire':
+                segment['story'] = construire_toc(planifier_toc(toc_pages))
 
     # ── UNE SEULE passe de rendu + fusion (offset connu en avançant) ──
     writer = PdfWriter()
@@ -592,7 +654,7 @@ def generer(safe=False):
     debut_num = None
     entrees = []
     for s in segments:
-        if running % 2 == 0:
+        if s.get('force_start') and running % 2 == 0:
             writer.add_blank_page(width=W, height=H); running += 1
         if s['type'] == 'chapitre' and debut_num is None:
             debut_num = running
@@ -604,16 +666,8 @@ def generer(safe=False):
         for p in pages.pages:
             writer.add_page(p)
         running += len(pages.pages)
-    # ── TDM en fin de volume ──
-    if running % 2 == 0:
-        writer.add_blank_page(width=W, height=H); running += 1
-    toc = [Spacer(1, 2 * cm), Paragraph('Table des matières', st_ch1), Spacer(1, 1 * cm)]
-    for t, p in entrees:
-        pts = max(3, 70 - len(t))
-        toc.append(Paragraph(f'{escape(t)} {"." * pts} {p if p < (debut_num or 1) else p - (debut_num or 1) + 1}', st_toc))
-    buf = rendre(toc, W, H, MARGES, {'F': F, 'entete': None, 'debut_num': 10 ** 9, 'pad': PAD}, running - 1)
-    for p in PdfReader(buf).pages:
-        writer.add_page(p)
+    if len(writer.pages) % 2:
+        writer.add_blank_page(width=W, height=H)
     titre = INFOS.get('titre complet du roman', '') or 'Roman'
     writer.add_metadata({'/Title': titre, '/Author': INFOS.get("nom de l'auteur (couverture)", ''),
                          '/Creator': 'generer_pdf_direct v3.0'})
@@ -656,9 +710,6 @@ def generer_depuis_word():
         print('   ⚠️ Word trop lent (>180 s) → génération directe.'); return False
 
 def main():
-    if '--direct' not in sys.argv[1:] and generer_depuis_word():
-        return
-
     try:
         generer(safe=False)
     except Exception as e:

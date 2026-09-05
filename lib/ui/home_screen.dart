@@ -272,6 +272,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final focusedContext = FocusManager.instance.primaryFocus?.context;
+    final editing = focusedContext?.widget is EditableText ||
+        focusedContext?.findAncestorWidgetOfExactType<EditableText>() != null;
+    if (editing) return KeyEventResult.ignored;
     final n = _rubanLabels.length;
     if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
         event.logicalKey == LogicalKeyboardKey.pageDown) {
@@ -1065,27 +1069,36 @@ class _HomeScreenState extends State<HomeScreen>
         onKeyEvent: _onKey,
         child: Stack(children: [
           Row(children: [Expanded(child: _mainArea())]),
-          const Positioned.fill(child: Ambiance()),
+          Positioned.fill(child: Ambiance(subdued: _busy || _page == 1)),
         ]),
       ),
     );
   }
 
   Widget _mainArea() {
-    return Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(children: [
-          const SizedBox(height: 4),
-          Opacity(
-              opacity: _busy ? 1.0 : 0.0,
-              child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _ProgressIndicator(
-                      target: _progressTarget, phase: _phase, active: _busy))),
-          Expanded(flex: 6, child: RepaintBoundary(child: _livre())),
-          const SizedBox(height: 10),
-          Expanded(flex: 4, child: RepaintBoundary(child: _console())),
-        ]));
+    return LayoutBuilder(builder: (context, constraints) {
+      final narrow = constraints.maxWidth < 1100;
+      return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(children: [
+            const SizedBox(height: 4),
+            Opacity(
+                opacity: _busy ? 1.0 : 0.0,
+                child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _ProgressIndicator(
+                        target: _progressTarget,
+                        phase: _phase,
+                        active: _busy))),
+            Expanded(
+                flex: narrow ? 1 : 6, child: RepaintBoundary(child: _livre())),
+            const SizedBox(height: 10),
+            if (narrow)
+              SizedBox(height: 96, child: RepaintBoundary(child: _console()))
+            else
+              Expanded(flex: 4, child: RepaintBoundary(child: _console())),
+          ]));
+    });
   }
 
   static const List<String> _rubanLabels = [
@@ -1247,16 +1260,17 @@ class _HomeScreenState extends State<HomeScreen>
         }),
       )),
       Positioned(
-          left: 54,
           right: 54,
           bottom: 28,
-          height: 38,
-          child: AntiqueButton(
-              label: 'Fermer le livre',
-              emoji: '✒',
-              compact: true,
-              onParchment: true,
-              onTap: _fermerLivre)),
+          child: Tooltip(
+              message: 'Fermer le livre',
+              child: AntiqueButton(
+                  label: 'Fermer le livre',
+                  icon: Icons.close,
+                  compact: true,
+                  iconOnly: true,
+                  onParchment: true,
+                  onTap: _fermerLivre))),
     ]));
   }
 
@@ -1341,7 +1355,7 @@ class _HomeScreenState extends State<HomeScreen>
       padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _titrePage('RÉGLAGES'),
-        _actionPage('⚙', 'Paramètres', _ouvrirParametres),
+        _actionPage('⚙', 'Paramètres', _ouvrirParametres, primary: true),
         _actionPage('📤', 'Dossier export', () => _ouvrirDossier('export')),
         _actionPage('🖼', 'Dossier des images', () => _ouvrirDossier('Images')),
         _actionPage(
@@ -1354,50 +1368,95 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _boutonLivre(String emoji, String label, VoidCallback onTap) {
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      Material(
-          color: Colors.transparent,
-          child: InkWell(
-              borderRadius: BorderRadius.circular(30),
-              onTap: onTap,
-              child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const RadialGradient(
-                          colors: [Color(0xFFf6efdd), Color(0xFFe2d3ae)]),
-                      border: Border.all(color: AntiqueTheme.brass, width: 2),
-                      boxShadow: const [
-                        BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 3,
-                            offset: Offset(1, 2))
-                      ]),
-                  child: Center(
-                      child:
-                          Text(emoji, style: const TextStyle(fontSize: 21)))))),
-      const SizedBox(height: 4),
-      Text(label,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.cinzel(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              color: AntiqueTheme.bloodInk,
-              letterSpacing: 0.5)),
-    ]);
+    return AntiqueButton(
+        label: label,
+        emoji: emoji,
+        compact: true,
+        primary: label == 'Enregistrer',
+        onParchment: label != 'Enregistrer',
+        onTap: onTap);
   }
 
   Widget _ligneBoutonsLivre(List<Widget> boutons) {
-    final children = <Widget>[];
-    for (int i = 0; i < boutons.length; i++) {
-      children.add(boutons[i]);
-      if (i < boutons.length - 1) children.add(const SizedBox(width: 16));
-    }
     return Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-            mainAxisAlignment: MainAxisAlignment.center, children: children));
+        child: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 8,
+            children: boutons));
+  }
+
+  Widget _navigationInfos() {
+    const onglets = [
+      ('Ⅰ', 'Identité', 1),
+      ('Ⅱ', 'Édition', 2),
+      ('Ⅲ', 'Mentions', 3),
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (final onglet in onglets) ...[
+            _ongletInfos(
+              romain: onglet.$1,
+              label: onglet.$2,
+              page: onglet.$3,
+            ),
+            if (onglet.$3 != 3) const SizedBox(width: 18),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _ongletInfos({
+    required String romain,
+    required String label,
+    required int page,
+  }) {
+    final active = _infosPage == page;
+    final color = active ? AntiqueTheme.bloodInk : AntiqueTheme.inkSepia;
+    return Semantics(
+      button: true,
+      selected: active,
+      label: label,
+      child: TextButton(
+        onPressed: () => setState(() => _infosPage = page),
+        style: TextButton.styleFrom(
+          foregroundColor: color,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          shape: const RoundedRectangleBorder(),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$romain  $label',
+              style: GoogleFonts.cinzel(
+                fontSize: 11,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                color: color,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 4),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeInOutCubic,
+              width: active ? 42 : 16,
+              height: active ? 2 : 1,
+              color: active
+                  ? AntiqueTheme.brass
+                  : AntiqueTheme.brass.withValues(alpha: 0.35),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _pageInfos() {
@@ -1405,53 +1464,94 @@ class _HomeScreenState extends State<HomeScreen>
         padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _titrePage('INFORMATIONS'),
+          _navigationInfos(),
           Expanded(
-              child: SingleChildScrollView(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                if (_infosPage == 1) ...[
-                  _champInfo('Titre complet du roman', _iTitre),
-                  _champInfo('Sous-titre éventuel', _iSousTitre),
-                  _champInfo("Nom de l'auteur (couverture)", _iAuteur),
-                  Row(children: [
-                    Expanded(
-                        child: _champInfo('Année de publication', _iAnnee)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _champInfo('ISBN', _iIsbn)),
-                  ]),
-                  _champInfo('Dépôt légal', _iDepotLegal),
-                  _champInfo('Mention de copyright', _iCopyright),
-                  _champInfo('Édition', _iEdition),
-                  _champInfo('Site web', _iSiteWeb),
-                  _champInfo('Avertissement', _iAvertissement, lines: 3),
-                  _champInfo('Dédicace', _iDedicace, lines: 2),
-                  _caseSommaire(),
-                  const SizedBox(height: 12),
-                ] else ...[
-                  _champInfo('Éditeur', _iEditeur),
-                  _champInfo('Autres livres du même auteur', _iAutresLivres,
-                      lines: 5),
-                  _champInfo('Remerciements', _iRemerciements, lines: 4),
-                  _champInfo('Épigraphe', _iEpigraphe, lines: 2),
-                  _champDropdownImages('Frontispice', _iFrontispice),
-                  _champDropdownChapitres('Préface', _iPreface),
-                  _champDropdownChapitres('Postface', _iPostface),
-                  const SizedBox(height: 12),
-                  _ligneBoutonsLivre([
-                    _boutonLivre(
-                        '←', 'Page 1', () => setState(() => _infosPage = 1)),
-                  ]),
-                ],
-                const SizedBox(height: 8),
-                _ligneBoutonsLivre([
-                  _boutonLivre('💾', 'Enregistrer', _sauverInfos),
-                  _boutonLivre(
-                      '→', 'Page 2', () => setState(() => _infosPage = 2))
-                ]),
-                const SizedBox(height: 8),
-              ]))),
+            child: SingleChildScrollView(
+              child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 320),
+                  switchInCurve: Curves.easeInOutCubic,
+                  switchOutCurve: Curves.easeInOutCubic,
+                  transitionBuilder: (child, animation) {
+                    final turn = Tween<double>(
+                      begin: math.pi / 2,
+                      end: 0,
+                    ).animate(animation);
+                    return AnimatedBuilder(
+                      animation: turn,
+                      child: child,
+                      builder: (context, child) {
+                        final transform = Matrix4.identity()
+                          ..setEntry(3, 2, 0.0012)
+                          ..rotateY(turn.value);
+                        return Opacity(
+                          opacity: animation.value,
+                          child: Transform(
+                            alignment: Alignment.center,
+                            transform: transform,
+                            child: child,
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  child: _contenuInfos(_infosPage)),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _ligneBoutonsLivre([
+            _boutonLivre('💾', 'Enregistrer', _sauverInfos),
+          ]),
+          const SizedBox(height: 8),
         ]));
+  }
+
+  Widget _contenuInfos(int page) {
+    return KeyedSubtree(
+      key: ValueKey(page),
+      child: switch (page) {
+        1 => _pageInfosIdentite(),
+        2 => _pageInfosEdition(),
+        _ => _pageInfosMentions(),
+      },
+    );
+  }
+
+  Widget _pageInfosIdentite() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _champInfo('Titre complet du roman', _iTitre),
+      _champInfo('Sous-titre éventuel', _iSousTitre),
+      _champInfo("Nom de l'auteur (couverture)", _iAuteur),
+      Row(children: [
+        Expanded(child: _champInfo('Année de publication', _iAnnee)),
+        const SizedBox(width: 12),
+        Expanded(child: _champInfo('ISBN', _iIsbn)),
+      ]),
+    ]);
+  }
+
+  Widget _pageInfosEdition() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _champInfo('Éditeur', _iEditeur),
+      _champInfo('Dépôt légal', _iDepotLegal),
+      _champInfo('Mention de copyright', _iCopyright),
+      _champInfo('Édition', _iEdition),
+      _champInfo('Site web', _iSiteWeb),
+    ]);
+  }
+
+  Widget _pageInfosMentions() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _champInfo('Avertissement', _iAvertissement, lines: 3),
+      _champInfo('Dédicace', _iDedicace, lines: 2),
+      _champInfo('Épigraphe', _iEpigraphe, lines: 2),
+      _champInfo('Remerciements', _iRemerciements, lines: 4),
+      _champInfo('Autres livres du même auteur', _iAutresLivres, lines: 5),
+      _champDropdownImages('Frontispice', _iFrontispice),
+      _champDropdownChapitres('Préface', _iPreface),
+      _champDropdownChapitres('Postface', _iPostface),
+      _caseSommaire(),
+      const SizedBox(height: 12),
+    ]);
   }
 
   Widget _caseSommaire() {
@@ -1488,17 +1588,35 @@ class _HomeScreenState extends State<HomeScreen>
                   fontWeight: FontWeight.w700,
                   color: AntiqueTheme.bloodInk,
                   letterSpacing: 1)),
-          TextField(
-              controller: ctrl,
-              maxLines: lines,
-              style: AntiqueTheme.bodyText.copyWith(fontSize: 14),
-              decoration: const InputDecoration(
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 6),
-                  enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AntiqueTheme.brass)),
-                  focusedBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: AntiqueTheme.bloodInk)))),
+          Theme(
+              data: Theme.of(context).copyWith(
+                  textSelectionTheme: TextSelectionThemeData(
+                      cursorColor: AntiqueTheme.bloodInk,
+                      selectionColor:
+                          AntiqueTheme.agedGold.withValues(alpha: 0.35),
+                      selectionHandleColor: AntiqueTheme.bloodInk)),
+              child: TextField(
+                  controller: ctrl,
+                  maxLines: lines,
+                  style: AntiqueTheme.bodyText.copyWith(fontSize: 14),
+                  cursorColor: AntiqueTheme.bloodInk,
+                  decoration: InputDecoration(
+                      filled: true,
+                      fillColor: AntiqueTheme.parchment,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      hintStyle: AntiqueTheme.bodyText.copyWith(
+                          color: AntiqueTheme.inkSepia.withValues(alpha: 0.65)),
+                      labelStyle: AntiqueTheme.bodyText
+                          .copyWith(color: AntiqueTheme.inkSepia),
+                      enabledBorder: UnderlineInputBorder(
+                          borderSide: BorderSide(
+                              color:
+                                  AntiqueTheme.brass.withValues(alpha: 0.8))),
+                      focusedBorder: UnderlineInputBorder(
+                          borderSide:
+                              BorderSide(color: AntiqueTheme.bloodInk))))),
         ]));
   }
 
@@ -1617,19 +1735,42 @@ class _HomeScreenState extends State<HomeScreen>
                 '${_organisation.length} élément(s) — actes, chapitres & images',
                 style: AntiqueTheme.titlePage.copyWith(fontSize: 12)),
             const Spacer(),
-            InkWell(
-                onTap: () {
-                  _chargerChapitres();
-                  _chargerOrganisation();
-                  setState(() {});
-                  _log('🔄 Chapitres et organisation rechargés.',
-                      kind: LogKind.ok);
-                },
-                child: Text('🔄 Recharger',
-                    style: GoogleFonts.cinzel(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AntiqueTheme.bloodInk))),
+            Semantics(
+              button: true,
+              label: 'Recharger les chapitres et l’organisation',
+              child: Tooltip(
+                message: 'Recharger les chapitres et l’organisation',
+                child: Focus(
+                  onKeyEvent: (_, event) {
+                    if (event is KeyDownEvent &&
+                        (event.logicalKey == LogicalKeyboardKey.enter ||
+                            event.logicalKey == LogicalKeyboardKey.space)) {
+                      _chargerChapitres();
+                      _chargerOrganisation();
+                      setState(() {});
+                      _log('🔄 Chapitres et organisation rechargés.',
+                          kind: LogKind.ok);
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: InkWell(
+                    onTap: () {
+                      _chargerChapitres();
+                      _chargerOrganisation();
+                      setState(() {});
+                      _log('🔄 Chapitres et organisation rechargés.',
+                          kind: LogKind.ok);
+                    },
+                    child: Text('🔄 Recharger',
+                        style: GoogleFonts.cinzel(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AntiqueTheme.bloodInk)),
+                  ),
+                ),
+              ),
+            ),
           ]),
           const SizedBox(height: 10),
           Row(children: [
@@ -1684,34 +1825,112 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _miniBtn(String s, VoidCallback onTap) {
-    return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(4),
-        child: Padding(
-            padding: const EdgeInsets.all(5),
-            child: Text(s,
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: AntiqueTheme.bloodInk))));
+    var focused = false;
+    final label = s == '🗑' ? 'Supprimer' : 'Déplacer $s';
+    return StatefulBuilder(
+      builder: (context, setLocalState) => FocusableActionDetector(
+        onShowFocusHighlight: (value) {
+          focused = value;
+          setLocalState(() {});
+        },
+        child: Focus(
+          onKeyEvent: (_, event) {
+            if (event is KeyDownEvent &&
+                (event.logicalKey == LogicalKeyboardKey.enter ||
+                    event.logicalKey == LogicalKeyboardKey.space)) {
+              onTap();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Semantics(
+            button: true,
+            label: label,
+            child: Tooltip(
+              message: label,
+              child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    border: focused
+                        ? Border.all(color: AntiqueTheme.candleGlow)
+                        : null,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    s,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AntiqueTheme.bloodInk,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _ajoutBtn(String icone, String label, VoidCallback onTap) {
-    return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(6),
-        child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 9),
-            decoration: BoxDecoration(
-                color: const Color(0x142F6B3A),
+    var focused = false;
+    return StatefulBuilder(
+      builder: (context, setLocalState) => FocusableActionDetector(
+        onShowFocusHighlight: (value) {
+          focused = value;
+          setLocalState(() {});
+        },
+        child: Focus(
+          onKeyEvent: (_, event) {
+            if (event is KeyDownEvent &&
+                (event.logicalKey == LogicalKeyboardKey.enter ||
+                    event.logicalKey == LogicalKeyboardKey.space)) {
+              onTap();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Semantics(
+            button: true,
+            label: 'Ajouter $label',
+            child: Tooltip(
+              message: 'Ajouter $label',
+              child: InkWell(
+                onTap: onTap,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AntiqueTheme.verdigris, width: 1.2)),
-            child: Center(
-                child: Text('+ $icone $label',
-                    style: GoogleFonts.cinzel(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  decoration: BoxDecoration(
+                    color: const Color(0x142F6B3A),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: focused
+                          ? AntiqueTheme.candleGlow
+                          : AntiqueTheme.verdigris,
+                      width: focused ? 1.8 : 1.2,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '+ $icone $label',
+                      style: GoogleFonts.cinzel(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: AntiqueTheme.verdigris)))));
+                        color: AntiqueTheme.verdigris,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // ══ 3. CORRECTION ══
@@ -1735,7 +1954,7 @@ class _HomeScreenState extends State<HomeScreen>
         _titrePage('PRODUCTION'),
         _modeSelector(),
         const SizedBox(height: 10),
-        _actionPage('▶', 'Générer le livre', _genererLivre),
+        _actionPage('▶', 'Générer le livre', _genererLivre, primary: true),
         _actionPage('🖨', 'PDF KDP noir & blanc', _exportPdf),
         _actionPage('📱', 'Ebook KDP (EPUB)', _genererEbook),
         _actionPage('🤖', 'Résumés IA', _resumesIA),
@@ -1749,7 +1968,8 @@ class _HomeScreenState extends State<HomeScreen>
       padding: const EdgeInsets.fromLTRB(22, 20, 18, 18),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _titrePage('LECTURE'),
-        _actionPage('📖', 'Lire le Word', () => _lireDocument('word')),
+        _actionPage('📖', 'Lire le Word', () => _lireDocument('word'),
+            primary: true),
         _actionPage('📄', 'Lire le PDF', () => _lireDocument('pdf')),
         _actionPage('📚', "Lire l'EPUB", () => _lireDocument('epub')),
         _actionPage('📝', 'Lire le résumé', _lireResume),
@@ -1824,11 +2044,16 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _actionPage(String icone, String label, VoidCallback onTap) {
+  Widget _actionPage(String icone, String label, VoidCallback onTap,
+      {bool primary = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: AntiqueButton(
-          label: label, emoji: icone, onParchment: true, onTap: onTap),
+          label: label,
+          emoji: icone,
+          primary: primary,
+          onParchment: true,
+          onTap: onTap),
     );
   }
 
@@ -1844,27 +2069,63 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _modeChip(String mode, String label) {
     final on = _modeGeneration == mode;
-    return GestureDetector(
-        onTap: () {
-          setState(() => _modeGeneration = mode);
-          _sauverConfig();
+    var focused = false;
+    void activate() {
+      setState(() => _modeGeneration = mode);
+      _sauverConfig();
+    }
+
+    return StatefulBuilder(
+      builder: (context, setLocalState) => FocusableActionDetector(
+        onShowFocusHighlight: (value) {
+          focused = value;
+          setLocalState(() {});
         },
-        child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-                color: on ? AntiqueTheme.bloodInk : const Color(0x14000000),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                    color: on ? AntiqueTheme.bloodInk : AntiqueTheme.brass,
-                    width: 1.2)),
-            child: Center(
-                child: Text(label,
+        child: Focus(
+          onKeyEvent: (_, event) {
+            if (event is KeyDownEvent &&
+                (event.logicalKey == LogicalKeyboardKey.enter ||
+                    event.logicalKey == LogicalKeyboardKey.space)) {
+              activate();
+              return KeyEventResult.handled;
+            }
+            return KeyEventResult.ignored;
+          },
+          child: Semantics(
+            button: true,
+            selected: on,
+            label: 'Mode de génération : $label',
+            child: GestureDetector(
+              onTap: activate,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: on ? AntiqueTheme.bloodInk : const Color(0x14000000),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: focused
+                        ? AntiqueTheme.candleGlow
+                        : (on ? AntiqueTheme.bloodInk : AntiqueTheme.brass),
+                    width: focused ? 1.8 : 1.2,
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    label,
                     style: GoogleFonts.cinzel(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: on
-                            ? AntiqueTheme.parchment
-                            : AntiqueTheme.inkSepia)))));
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color:
+                          on ? AntiqueTheme.parchment : AntiqueTheme.inkSepia,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _chapitrePicker() {
