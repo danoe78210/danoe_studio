@@ -82,7 +82,8 @@ SANS_TITRE = ('1.1',)
 
 import regles as _R
 from glossaire_shared import (extraire_definitions_glossaire,
-                              glossaire_texte, remplacer_references_texte)
+                              GlossaireLivre, remplacer_references_texte)
+GLOSSAIRE_LIVRE = GlossaireLivre()
 FORMATS_LIVRE = _R.FORMATS_LIVRE
 
 # ─────────────────────────────────────────────
@@ -545,7 +546,7 @@ def _sauver_et_reordonner(doc, chemin):
 
 
 def lire_annexes():
-    ax = {'sommaire': True}
+    ax = {'sommaire': True, 'glossaire': False}
     j = {}
     try:
         import json as _json2
@@ -567,6 +568,8 @@ def lire_annexes():
     ax['postface'] = g('postface', 'Postface')
     sv = j.get('sommaire')
     ax['sommaire'] = sv if isinstance(sv, bool) else (str(sv).strip().lower() != 'false' if sv is not None else True)
+    gv = j.get('glossaire')
+    ax['glossaire'] = gv if isinstance(gv, bool) else (str(gv).strip().lower() != 'false' if gv is not None else False)
     return ax
 
 def _get_infos(d):
@@ -812,6 +815,10 @@ def charger_chapitre(cfg):
         texte = texte.replace('  ', ' ')
     corps, defs = extraire_definitions_glossaire(texte)
     glossaire_actif = bool(lire_annexes().get('glossaire', False))
+    if glossaire_actif:
+        GLOSSAIRE_LIVRE.enregistrer(
+            defs, acte=cfg.get('acte', ''), chapitre=cfg.get('titre', '')
+        )
     lignes = [l.strip() for l in corps.splitlines()]
     if lignes and lignes[0] == '---':
         for j in range(1, len(lignes)):
@@ -822,7 +829,7 @@ def charger_chapitre(cfg):
     for l in lignes:
         if not l or META_RE.match(l):
             continue
-        l = remplacer_references_texte(l, active=glossaire_actif)
+        l = GLOSSAIRE_LIVRE.remplacer(l) if glossaire_actif else l
         if cfg.get('skip_titre') and l == cfg['skip_titre']:
             continue
         if l.startswith('## '):
@@ -845,8 +852,6 @@ def charger_chapitre(cfg):
         items.pop(0)
     while items and items[0][0] == 'sep':
         items.pop(0)
-    if lire_annexes().get('glossaire', False) and defs:
-        items.append(('glossaire', defs))
     paras = [t for k, t in items if k == 'p']
     mots_ch = sum(len(t.split()) for t in paras)
     dia_ch = sum(1 for t in paras if t.startswith('—'))
@@ -1237,21 +1242,45 @@ def ajouter_chapitre(titre, items, sans_titre=False):
             p = doc.add_paragraph()
             p.style = styles['SeparateurScene']
             run_style(p, '--- ✦ ---', POLICE_CORPS, TC)
-        elif kind == 'glossaire':
-            doc.add_page_break()
-            p = doc.add_paragraph()
-            p.style = styles['TitreSousChap']
-            run_style(p, 'Glossaire', POLICE_CORPS, STYLE['taille_sous'], True)
-            ligne_vide(1)
-            for ident, desc in texte.items():
-                p = doc.add_paragraph()
-                p.style = styles['CorpsTexte']
-                run_style(p, f'{ident}', POLICE_CORPS, TC, True)
-                run_style(p, f' — {desc}', POLICE_CORPS, TC)
-            premier = False
         else:
             paragraphe_corps(texte, initiale_grasse=premier, retrait=premier)
             premier = False
+
+
+def ajouter_glossaire_final():
+    """Ajoute le glossaire unique après le dernier chapitre du livre."""
+    if not GLOSSAIRE_LIVRE.entrees:
+        return
+    doc.add_page_break()
+    p = doc.add_paragraph()
+    p.style = styles['TitreChapitre']
+    run_style(p, 'Glossaire', POLICE_TITRES, STYLE['taille_chap1'], True)
+    ligne_vide(1)
+    for entree in GLOSSAIRE_LIVRE.entrees:
+        # -- Ligne 1 : terme en gras suivi de la référence Acte/Chapitre/page en italique --
+        p_terme = doc.add_paragraph()
+        p_terme.style = styles['CorpsTexte']
+        run_style(p_terme, entree.identifiant, POLICE_CORPS, TC, gras=True)
+        reference = []
+        if entree.acte:
+            # Évite le doublon "Acte Acte I" si la valeur source contient déjà le préfixe
+            reference.append(entree.acte if entree.acte.lower().startswith('acte') else f'Acte {entree.acte}')
+        if entree.chapitre:
+            # Idem pour "Chapitre" (préfixe déjà présent dans certains JSON/ORG source)
+            reference.append(entree.chapitre if entree.chapitre.lower().startswith('chapitre') else f'Chapitre {entree.chapitre}')
+        reference_txt = ', '.join(reference)
+        if entree.page:
+            reference_txt = f'{reference_txt} (p. {entree.page})' if reference_txt else f'p. {entree.page}'
+        if reference_txt:
+            run_style(p_terme, ' — ', POLICE_CORPS, TC)
+            run_style(p_terme, reference_txt, POLICE_CORPS, TC, italique=True)
+
+        # -- Ligne 2 : définition en paragraphe séparé, sans mise en forme particulière --
+        p_def = doc.add_paragraph()
+        p_def.style = styles['CorpsTexte']
+        run_style(p_def, entree.definition, POLICE_CORPS, TC)
+
+        ligne_vide(1)
 
 # ─────────────────────────────────────────────
 # 7. MARGES KDP (v2.9.4 : SYMÉTRIQUES, barème officiel + sécurité)
@@ -1627,6 +1656,7 @@ def slug(s):
 
 def main():
     global NB_ACTES, NB_CHAPITRES
+    GLOSSAIRE_LIVRE.reinitialiser()
     if JSON_OK and os.path.isfile(CHEMIN_CONFIG_JSON):
         print('   🧩 Source de configuration : Configuration_roman.json')
     elif os.path.isfile(CHEMIN_CONFIG):
@@ -1662,18 +1692,23 @@ def main():
     charges = {}
     if organisation:
         NB_ACTES = sum(1 for b in organisation if b.get('type') == 'acte')
+        acte_courant = ''
         for bloc in organisation:
+            if bloc.get('type') == 'acte':
+                acte_courant = bloc.get('acte', '')
+                continue
             if bloc.get('type') != 'chapitre':
                 continue
             m = re.match(r'(\d+\.\d+)', bloc['fichier'])
-            prefixe = m.group(1) if m else bloc['fichier'][:3]
+            prefixe = m.group(1) if m else bloc['fichier']
             sans_titre = (prefixe in SANS_TITRE)
             cfg = {
                 'fichier': prefixe,
                 'titre': bloc['titre'],
                 'corr': corr_pour(bloc['fichier']),
                 'skip_titre': bloc['titre'],
-                'sans_titre': sans_titre
+                'sans_titre': sans_titre,
+                'acte': acte_courant,
             }
             charges[bloc['fichier']] = (prefixe, sans_titre, charger_chapitre(cfg))
         NB_CHAPITRES = sum(1 for _p, _s, it in charges.values() if it)
@@ -1808,6 +1843,7 @@ def main():
             p.paragraph_format.space_after = Pt(0)
             p.paragraph_format.line_spacing = 1.0
 
+    ajouter_glossaire_final()
     est = marges_courantes_fin()
     pages_avant = est if MODE_RAPIDE else pages_courantes_fin(est)
     nb_blanks = 1 if (int(pages_avant) % 2 == 1 and pages_avant > 0) else 0

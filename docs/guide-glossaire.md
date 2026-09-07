@@ -1,6 +1,6 @@
 # Utiliser le glossaire
 
-Le mode glossaire permet d'associer une définition à un mot ou à une expression dans un chapitre. Les définitions sont ensuite regroupées dans une section dédiée à la fin du chapitre.
+Le mode glossaire permet d'associer une définition à un mot ou à une expression dans un chapitre. Les définitions sont ensuite regroupées dans une section dédiée à la fin du livre.
 
 ## 1. Activer le mode glossaire
 
@@ -70,15 +70,19 @@ Sans indentation, la ligne suivante est considérée comme un nouveau paragraphe
 
 ### EPUB
 
-La référence devient cliquable. Un clic ouvre la définition dans la section **Glossaire** et le lien de retour permet de revenir au mot dans le chapitre.
+Chaque référence reçoit un numéro incrémental (`[1]`, `[2]`, etc.). Elle devient cliquable : un clic ouvre la définition dans la section **Glossaire** et le lien de retour permet de revenir au numéro dans le chapitre.
 
 ### Word
 
-Une section **Glossaire** est ajoutée à la fin du chapitre. Les références sont affichées sous la forme `[scriptorium]`.
+Une section **Glossaire** est ajoutée à la fin du livre. Chaque entrée contient le numéro, le terme, l'Acte, le chapitre, la page et la définition. Les références sont affichées sous la forme `[1]`.
 
 ### PDF
 
-Une page dédiée **Glossaire** est ajoutée à la fin du chapitre. Les termes y sont mis en évidence, suivis de leur définition.
+Une section dédiée **Glossaire** est ajoutée à la fin du livre. Les termes sont numérotés et mis en évidence, suivis de l'Acte, du chapitre, de la page et de leur définition.
+
+### Limite de pagination
+
+L'Acte et le chapitre proviennent de l'organisation du livre. La page exacte de chaque occurrence dépend de la pagination finale du moteur de rendu : Word expose cette pagination après génération et l'EPUB est reflowable, sans pages fixes. Le collecteur conserve donc le champ `page` et affiche `—` lorsqu'aucune page de référence fiable n'est fournie par le moteur ; il ne fabrique pas un numéro approximatif.
 
 ## 6. Points à vérifier
 

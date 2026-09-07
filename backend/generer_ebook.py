@@ -147,6 +147,7 @@ p.first { text-indent: 0; }
 p.sep { text-align: center; margin: 1em 0; text-indent: 0; font-size: 1.1em; letter-spacing: 0.3em; }
 .note-ref { font-size: 0.75em; vertical-align: super; }
 .note-ref a { color: #234; text-decoration: underline; }
+.glossary-number { font-size: 0.75em; vertical-align: super; }
 .notes { margin-top: 1.5em; border-top: 1px solid #d6c6a8; padding-top: 0.8em; }
 .notes h3 { text-align: left; font-size: 1.1em; margin: 0 0 0.5em; }
 .notes ol { margin: 0; padding-left: 1.4em; }
@@ -304,8 +305,22 @@ def _convertir_notes_html(texte):
         return html_escape(normaliser_texte_editorial(str(texte)))
     texte = html_escape(normaliser_texte_editorial(str(texte)))
     return re.sub(r'\[\^([A-Za-z0-9_-]+)\]',
-                  r'<sup class="note-ref"><a href="#note-\1" id="ref-\1">[\1]</a></sup>',
+                  r'<sup class="note-ref"><a epub:type="noteref" href="#note-\1" id="ref-\1">[\1]</a></sup>',
                   texte)
+
+
+def _convertir_numeros_glossaire_html(texte):
+    """Rend les numéros [n] du DOCX navigables dans l'EPUB reflowable.
+
+    epub:type="noteref" active l'affichage en bulle (popup footnote EPUB3)
+    sur Kindle / Apple Books / Google Play Books, sans navigation de page.
+    """
+    return re.sub(
+        r'\[(\d+)\]',
+        r'<sup class="glossary-number"><a epub:type="noteref" href="#note-\1" '
+        r'id="ref-\1">[\1]</a></sup>',
+        texte,
+    )
 
 
 def _notes_html(texte):
@@ -485,9 +500,20 @@ def normaliser_texte_editorial(texte):
 
 
 def runs_to_html(paragraph):
+    texte_brut = normaliser_texte_editorial(paragraph.text)
+    entree = re.match(r'^\[(\d+)\]\s+—\s+(.+)$', texte_brut)
+    if not entree:
+        entree = re.match(r'^\[(\d+)\]\s+(.+?)\s+—\s+(.+)$', texte_brut)
+    if entree:
+        numero = entree.group(1)
+        contenu = entree.group(2) if len(entree.groups()) == 2 else (
+            f'{entree.group(2)} — {entree.group(3)}')
+        return (f'<div id="note-{numero}"><strong>[{numero}] '
+                f'{html_escape(contenu)}</strong></div>')
     parts = []
     for run in paragraph.runs:
         t = _convertir_notes_html(normaliser_texte_editorial(run.text))
+        t = _convertir_numeros_glossaire_html(t)
         if not t:
             continue
         if run.bold and run.italic:
@@ -509,7 +535,8 @@ def contient_image(paragraph):
 def page_xhtml(titre, corps):
     return ('<?xml version="1.0" encoding="utf-8"?>\n'
             '<!DOCTYPE html>\n'
-            '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="fr">\n'
+            '<html xmlns="http://www.w3.org/1999/xhtml" '
+            'xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="fr">\n'
             '<head><title>' + html_escape(titre) + '</title>\n'
             '<link rel="stylesheet" type="text/css" href="style/default.css"/>\n'
             '</head>\n<body>\n' + corps + '\n</body>\n</html>').encode('utf-8')
@@ -649,9 +676,15 @@ def construire_ebook(docx_path, infos, images, sortie):
     image_counter = 0
     chapitre_courant = None
     blocs_chapitre = []
+    # Compteur d'entrées de glossaire en EPUB3 popup footnote (voir bloc CorpsTexte ci-dessous).
+    glossaire_numero = 0
+    glossaire_div_ouverte = False
 
     def flush_chapitre():
-        nonlocal chapitre_courant, blocs_chapitre
+        nonlocal chapitre_courant, blocs_chapitre, glossaire_div_ouverte
+        if glossaire_div_ouverte:
+            blocs_chapitre.append('</div>')
+            glossaire_div_ouverte = False
         if chapitre_courant and blocs_chapitre:
             corps = ''.join(blocs_chapitre)
             add_page(chapitre_courant['id'], chapitre_courant['href'],
@@ -705,10 +738,29 @@ def construire_ebook(docx_path, infos, images, sortie):
 
         elif style_name in ('CorpsTexte', 'Normal') and texte:
             if chapitre_courant is not None:
-                html_body = runs_to_html(para)
-                if html_body:
-                    classe = 'first' if len(blocs_chapitre) == 1 else ''
-                    blocs_chapitre.append(f'<p class="{classe}">{html_body}</p>')
+                if chapitre_courant['titre'] == 'Glossaire':
+                    # Format généré par ajouter_glossaire_final() (generer_roman.py) :
+                    # 1er paragraphe = terme en gras (+ référence en italique) ; 2e = définition.
+                    # On les regroupe en <div epub:type="footnote"> pour le popup EPUB3.
+                    premier_run_gras = bool(para.runs) and para.runs[0].bold
+                    if premier_run_gras:
+                        if glossaire_div_ouverte:
+                            blocs_chapitre.append('</div>')
+                        glossaire_numero += 1
+                        blocs_chapitre.append(
+                            f'<div epub:type="footnote" id="note-{glossaire_numero}">'
+                            f'<p class="glossary-term">{runs_to_html(para)}</p>')
+                        glossaire_div_ouverte = True
+                    else:
+                        blocs_chapitre.append(f'<p>{runs_to_html(para)}</p>')
+                        if glossaire_div_ouverte:
+                            blocs_chapitre.append('</div>')
+                            glossaire_div_ouverte = False
+                else:
+                    html_body = runs_to_html(para)
+                    if html_body:
+                        classe = 'first' if len(blocs_chapitre) == 1 else ''
+                        blocs_chapitre.append(f'<p class="{classe}">{html_body}</p>')
 
     flush_chapitre()
 

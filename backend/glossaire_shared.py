@@ -1,9 +1,53 @@
 import re
 from collections import OrderedDict
+from dataclasses import dataclass
 from html import escape
 
 GLOSSAIRE_RE = re.compile(r'^\[\^([A-Za-z0-9_-]+)\]:\s*(.*)$')
 REF_RE = re.compile(r'\[\^([A-Za-z0-9_-]+)\]')
+NUM_REF_RE = re.compile(r'\[(\d+)\]')
+
+
+@dataclass
+class EntreeGlossaire:
+    numero: int
+    identifiant: str
+    definition: str
+    acte: str
+    chapitre: str
+    page: str
+
+
+class GlossaireLivre:
+    """Collecte un glossaire unique et numérote ses références dans l'ordre."""
+
+    def __init__(self):
+        self.entrees = []
+        self._par_identifiant = {}
+
+    def reinitialiser(self):
+        self.entrees.clear()
+        self._par_identifiant.clear()
+
+    def enregistrer(self, defs, acte='', chapitre='', page='à calculer après pagination'):
+        for ident, definition in defs.items():
+            if ident not in self._par_identifiant:
+                entree = EntreeGlossaire(
+                    len(self.entrees) + 1, str(ident), str(definition),
+                    str(acte), str(chapitre), str(page)
+                )
+                self._par_identifiant[ident] = entree
+                self.entrees.append(entree)
+
+    def remplacer(self, texte):
+        def remplacement(match):
+            entree = self._par_identifiant.get(match.group(1))
+            return f'[{entree.numero}]' if entree else match.group(0)
+
+        return REF_RE.sub(remplacement, str(texte))
+
+    def par_numero(self):
+        return {entree.numero: entree for entree in self.entrees}
 
 
 def extraire_definitions_glossaire(texte):
@@ -47,14 +91,23 @@ def format_glossaire_html(defs, titre='Glossaire'):
     if not defs:
         return ''
     items = []
-    for ident, desc in defs.items():
+    if isinstance(defs, GlossaireLivre):
+        sources = [
+            (entry.numero, entry.identifiant, entry.definition)
+            for entry in defs.entrees
+        ]
+    else:
+        sources = [(None, ident, desc) for ident, desc in defs.items()]
+    for numero, ident, desc in sources:
         ident_html = escape(str(ident), quote=True)
         clean = escape(str(desc).replace('\n', ' ').strip())
+        cible = str(numero) if numero is not None else ident_html
+        etiquette = f'[{numero}] ' if numero is not None else ''
         items.append(
-            f'<li id="note-{ident_html}">'
-            f'<a href="#ref-{ident_html}" aria-label="Retour à la référence '
-            f'{ident_html}">↩</a> '
-            f'<strong class="glossary-term">{ident_html}</strong> — {clean}</li>'
+            f'<li epub:type="footnote" id="note-{escape(cible, quote=True)}">'
+            f'<a href="#ref-{escape(cible, quote=True)}" aria-label="Retour à la référence '
+            f'{escape(cible, quote=True)}">↩</a> '
+            f'<strong class="glossary-term">{etiquette}{ident_html}</strong> — {clean}</li>'
         )
     return (
         '<section class="notes" aria-labelledby="glossaire-title">'

@@ -5,8 +5,10 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from glossaire_shared import (extraire_definitions_glossaire,
                               format_glossaire_html,
+                              GlossaireLivre,
                               remplacer_references_glossaire,
                               remplacer_references_texte)
+from generer_ebook import runs_to_html
 
 
 def test_extraire_definitions_glossaire():
@@ -51,3 +53,60 @@ def test_references_respectent_le_mode_desactive():
     assert remplacer_references_texte(texte, active=True) == 'Voir [rune].'
     assert '[^rune]' in remplacer_references_glossaire(texte)
     assert 'href="#note-rune"' in remplacer_references_glossaire(texte, True)
+
+
+def test_glossaire_livre_numere_et_collecte_les_metadonnees():
+    glossaire = GlossaireLivre()
+    glossaire.enregistrer(
+        {'rune': 'Signe ancien', 'cristal': 'Pierre rare'},
+        acte='Acte I', chapitre='Chapitre 1', page='12'
+    )
+
+    assert glossaire.remplacer('Une [^rune], puis [^cristal].') == 'Une [1], puis [2].'
+    assert glossaire.entrees[0].acte == 'Acte I'
+    assert glossaire.entrees[0].chapitre == 'Chapitre 1'
+    assert glossaire.entrees[0].page == '12'
+
+
+def test_glossaire_livre_conserve_le_numero_d_un_identifiant_reutilise():
+    glossaire = GlossaireLivre()
+    glossaire.enregistrer({'rune': 'Signe ancien'}, chapitre='Chapitre 1')
+    glossaire.enregistrer({'rune': 'Autre définition'}, chapitre='Chapitre 2')
+
+    assert glossaire.remplacer('[^rune]') == '[1]'
+    assert len(glossaire.entrees) == 1
+    assert glossaire.entrees[0].definition == 'Signe ancien'
+
+
+def test_format_html_collecteur_est_numerote():
+    glossaire = GlossaireLivre()
+    glossaire.enregistrer({'rune': 'Signe ancien'})
+
+    html = format_glossaire_html(glossaire)
+
+    assert 'id="note-1"' in html
+    assert '<strong class="glossary-term">[1] rune</strong>' in html
+
+
+def test_page_par_defaut_est_un_placeholder_honnete():
+    glossaire = GlossaireLivre()
+    glossaire.enregistrer({'rune': 'Signe ancien'})
+
+    assert glossaire.entrees[0].page == 'à calculer après pagination'
+
+
+def test_entree_word_est_une_cible_epub_numerotee():
+    class Run:
+        text = '[1] — Acte : Acte I; chapitre : Chapitre 1; page : 8; nom : rune; définition : Signe ancien'
+        bold = False
+        italic = False
+
+    class Paragraph:
+        text = Run.text
+        runs = [Run()]
+
+    html = runs_to_html(Paragraph())
+
+    assert 'id="note-1"' in html
+    assert '[1]' in html
+    assert 'définition : Signe ancien' in html

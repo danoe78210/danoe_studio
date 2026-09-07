@@ -25,12 +25,12 @@ from reportlab.lib.units import cm
 from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame, Paragraph,
-                                Spacer, PageBreak, Image as RLImage)
+                                Spacer, PageBreak, Image as RLImage, HRFlowable)
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from pypdf import PdfReader, PdfWriter
 import regles as _R
-from glossaire_shared import extraire_definitions_glossaire, remplacer_references_texte
+from glossaire_shared import extraire_definitions_glossaire, GlossaireLivre
 
 FORMATS_LIVRE = _R.FORMATS_LIVRE
 KDP_MARGES = [(maxi, gutter, _R.MARGES_EXTERIEURES_KDP[index][1])
@@ -156,7 +156,7 @@ def lire_infos():
     return infos
 
 def lire_annexes():
-    ax = {'sommaire': True}
+    ax = {'sommaire': True, 'glossaire': False}
     ji = _infos_de(_lire_json() or {})
     def g(*cles):
         for c in cles:
@@ -172,6 +172,8 @@ def lire_annexes():
     ax['postface'] = g('postface', 'Postface')
     sv = ji.get('sommaire')
     ax['sommaire'] = sv if isinstance(sv, bool) else (str(sv).strip().lower() != 'false' if sv is not None else True)
+    gv = ji.get('glossaire')
+    ax['glossaire'] = gv if isinstance(gv, bool) else (str(gv).strip().lower() != 'false' if gv is not None else False)
     return ax
 
 def _md_to_html(txt):
@@ -250,7 +252,7 @@ def _nettoie_espaces(t):
     t = t.replace('\u2011', '-')
     return t
 
-def charger_chapitre(fichier, skip_titre):
+def charger_chapitre(fichier, skip_titre, acte='', chapitre='', glossaire=None):
     cand = glob.glob(os.path.join(DOSSIER_CHAPITRES, fichier + '*.md'))
     if not cand: return None
     texte = open(cand[0], encoding='utf-8').read()
@@ -263,10 +265,12 @@ def charger_chapitre(fichier, skip_titre):
     while '  ' in texte: texte = texte.replace('  ', ' ')
     corps, defs = extraire_definitions_glossaire(texte)
     glossaire_actif = bool(lire_annexes().get('glossaire', False))
+    if glossaire_actif and glossaire is not None:
+        glossaire.enregistrer(defs, acte=acte, chapitre=chapitre)
     items = []
     for l in [x.strip() for x in corps.splitlines()]:
         if not l or META_RE.match(l) or l == skip_titre: continue
-        l = remplacer_references_texte(l, active=glossaire_actif)
+        l = glossaire.remplacer(l) if glossaire_actif and glossaire else l
         if l.startswith('## '): items.append(('h2', l[3:].strip()))
         elif l.startswith('# '): items.append(('h1', l[2:].strip()))
         elif l in ('---', '***', '___'): items.append(('sep', None))
@@ -275,8 +279,6 @@ def charger_chapitre(fichier, skip_titre):
                 for rx, rp in REGEX_PENSEES: l = rx.sub(rp, l)
             items.append(('p', l))
     while items and items[0][0] == 'sep': items.pop(0)
-    if lire_annexes().get('glossaire') and defs:
-        items.append(('glossaire', defs))
     return items
 
 # ── images HD N&B ──
@@ -371,14 +373,16 @@ def slug(s): return re.sub(r'[^\w]+', '_', s.strip(), flags=re.UNICODE).strip('_
 def generer(safe=False):
     STYLE = lire_style(); INFOS = lire_infos(); ORG = lire_organisation()
     F = registre_polices()
+    glossaire = GlossaireLivre()
     chapitres_charges = {}
 
-    def charger_depuis_cache(fichier, titre):
-        cle = (fichier, titre)
+    def charger_depuis_cache(fichier, titre, acte=''):
+        cle = (fichier, titre, acte)
         if cle not in chapitres_charges:
             pref = re.match(r'(\d+\.\d+)', fichier)
             chapitres_charges[cle] = charger_chapitre(
-                pref.group(1) if pref else fichier, titre) or []
+                pref.group(1) if pref else fichier, titre, acte, titre,
+                glossaire) or []
         return chapitres_charges[cle]
 
     TC = STYLE['taille_corps']; IL = STYLE['interligne']
@@ -404,8 +408,39 @@ def generer(safe=False):
     st_lim = ParagraphStyle('lim', fontName=F['c'], fontSize=9, leading=12,
                             alignment=TA_JUSTIFY)
     st_toc = ParagraphStyle('toc', fontName=F['c'], fontSize=10, leading=16)
+    # Police réduite pour les notes de bas de page (compromis : voir construire_notes_bas_de_page).
+    st_note = ParagraphStyle('note', fontName=F['c'], fontSize=max(7.0, TC - 2),
+                             leading=max(9.0, TC - 1), alignment=TA_JUSTIFY, spaceBefore=2)
 
-    def para(texte, style, gras_debut=False):
+    def construire_notes_bas_de_page(numeros, glossaire, prefixe_segment):
+        """Bloc « notes de bas de page » inséré en fin de chapitre.
+
+        COMPROMIS TECHNIQUE : une vraie note de bas de PAGE (comme dans un livre
+        imprimé classique) demanderait de connaître, pendant la mise en page
+        Platypus, la coupure exacte des pages — impossible ici car chaque
+        chapitre est mis en page comme un segment indépendant puis fusionné en
+        PDF brut (voir `rendre`/`segments`). On regroupe donc les notes en fin
+        de CHAPITRE (et non en fin de livre) : le lecteur n'a plus qu'à tourner
+        quelques pages au lieu de sauter à la fin de l'ouvrage.
+
+        `prefixe_segment` rend chaque ancre `<a name="..."/>` unique au segment
+        rendu (chaque chapitre est un mini-document PDF indépendant — voir
+        `rendre`) : un lien ReportLab ne peut être résolu que si son ancre
+        cible existe dans CE MÊME segment, jamais dans un autre (glossaire
+        final compris).
+        """
+        par_numero = glossaire.par_numero()
+        bloc = [Spacer(1, 6), HRFlowable(width='30%', thickness=0.5, color='#000000',
+                                         spaceBefore=2, spaceAfter=4, hAlign='LEFT')]
+        for n in numeros:
+            entree = par_numero.get(n)
+            if entree:
+                bloc.append(Paragraph(
+                    f'<a name="note-{prefixe_segment}-{n}"/>{n}. {escape(entree.definition)}',
+                    st_note))
+        return bloc
+
+    def para(texte, style, gras_debut=False, prefixe_segment=''):
         runs = re.findall(r'(\*\*[^*]+?\*\*|\*[^*]+?\*|_[^_]+?_|[^*]+)', texte)
         html = ''
         for r in runs:
@@ -417,13 +452,25 @@ def generer(safe=False):
             reste = html[m.end():]
             if reste:
                 html = (m.group(0) + f'<font name="{F["b"]}" size="{TC + 3}">{reste[0]}</font>' + reste[1:])
+        # Appel de note en exposant ; le lien pointe vers l'ancre de note du MÊME
+        # segment (jamais vers le glossaire final, rendu dans un autre segment).
+        html = re.sub(
+            r'\[(\d+)\]',
+            lambda m: (f'<super><link href="#note-{prefixe_segment}-{m.group(1)}" '
+                       f'color="blue">[{m.group(1)}]</link></super>'),
+            html,
+        )
         return Paragraph(html, style)
 
     # ── estimation marges KDP ──
     mots = 0
+    acte_courant = ''
     for b in ORG:
+        if b['type'] == 'acte':
+            acte_courant = b['acte']
+            continue
         if b['type'] == 'chapitre':
-            it = charger_depuis_cache(b['fichier'], b['titre'])
+            it = charger_depuis_cache(b['fichier'], b['titre'], acte_courant)
             mots += sum(len(t.split()) for k, t in it if k == 'p')
     pages_est = 120.0
     for _ in range(6):
@@ -535,6 +582,8 @@ def generer(safe=False):
                              'force_start': True})
 
 
+    acte_courant = ''
+    _chap_seg_idx = 0
     for b in ORG:
         if b['type'] == 'image':
             ch = None
@@ -556,14 +605,16 @@ def generer(safe=False):
             segments.append({'type': 'image', 'story': st, 'entete': None,
                              'force_start': True})
         elif b['type'] == 'acte':
+            acte_courant = b['acte']
             segments.append({'type': 'acte', 'titre': b['acte'], 'entete': None,
                              'story': [Spacer(1, 4 * cm), Paragraph(escape(b['acte']), st_acte)],
                              'force_start': True})
         else:
+            _chap_seg_idx += 1
             pref_match = re.match(r'(\d+\.\d+)', b['fichier'])
             pref = pref_match.group(1) if pref_match else b['fichier']
             sans = pref in SANS_TITRE
-            items = charger_depuis_cache(b['fichier'], b['titre'])
+            items = charger_depuis_cache(b['fichier'], b['titre'], acte_courant)
             if items and items[0][0] in ('h1', 'h2') and not sans: items.pop(0)
             while items and items[0][0] == 'sep': items.pop(0)
             st = []
@@ -576,22 +627,42 @@ def generer(safe=False):
                     st += [Spacer(1, 3 * cm), Paragraph(escape(b['titre']), st_ch1)]
             st.append(Spacer(1, titre_corps_gap))
             premier = True
+            notes_utilisees = []
             for k, t in items:
                 if k == 'h1': st += [PageBreak(), Paragraph(escape(t), st_ch1_corps)]; premier = True
                 elif k == 'h2': st += [PageBreak(), Paragraph(escape(t), st_sous_corps)]; premier = True
                 elif k == 'sep': st.append(Paragraph('--- ✦ ---', st_sep))
-                elif k == 'glossaire':
-                    st += [PageBreak(), Paragraph('Glossaire', st_acte)]
-                    for ident, desc in t.items():
-                        st.append(Paragraph(
-                            f'<b>{escape(ident)}</b> — {escape(desc)}', st_lim))
-                    premier = False
                 else:
-                    st.append(para(t, st_debut if premier else st_corps, gras_debut=premier))
+                    st.append(para(t, st_debut if premier else st_corps, gras_debut=premier,
+                                   prefixe_segment=_chap_seg_idx))
+                    notes_utilisees += [int(n) for n in re.findall(r'\[(\d+)\]', t)]
                     premier = False
+            if notes_utilisees and glossaire.entrees:
+                # Notes de bas de chapitre (voir compromis dans construire_notes_bas_de_page) ;
+                # ancres locales au segment courant (_chap_seg_idx), jamais partagées inter-segments.
+                st.extend(construire_notes_bas_de_page(dict.fromkeys(notes_utilisees), glossaire,
+                                                        _chap_seg_idx))
             segments.append({'type': 'chapitre', 'titre': b['titre'],
                              'entete': b['titre'], 'story': st,
                              'force_start': True})
+
+    def construire_glossaire(page):
+        story = [PageBreak(), Paragraph('Glossaire', st_acte)]
+        for entree in glossaire.entrees:
+            story.append(Paragraph(
+                f'<a name="glossary-{entree.numero}"/>'
+                f'<b>[{entree.numero}] Acte : {escape(entree.acte or "—")}; '
+                f'chapitre : {escape(entree.chapitre or "—")}; '
+                f'page : {escape(str(page))}; '
+                f'nom : {escape(entree.identifiant)}; '
+                f'définition : {escape(entree.definition)}</b>', st_lim))
+        return story
+
+    if glossaire.entrees:
+        glossaire_story = construire_glossaire('à calculer')
+        segments.append({'type': 'glossaire', 'titre': 'Glossaire',
+                         'entete': None, 'story': glossaire_story,
+                         'force_start': True, 'construire': construire_glossaire})
 
     if _ax.get('postface'):
         _pc = os.path.join(DOSSIER_CHAPITRES, _ax['postface'] + '.md')
@@ -672,6 +743,8 @@ def generer(safe=False):
             debut_num = running
         if s['type'] in ('acte', 'chapitre'):
             entrees.append((s['titre'], running))
+        if s['type'] == 'glossaire':
+            s['story'] = s['construire'](running)
         params = {'F': F, 'entete': s['entete'], 'debut_num': debut_num or 10 ** 9, 'pad': PAD}
         buf = rendre(s['story'], W, H, MARGES, params, running - 1)
         pages = PdfReader(buf)
