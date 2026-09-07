@@ -1,6 +1,6 @@
 # 🖋️ Danoë Studio — Machine à romans pour écrivains
 
-**Version 3.6.0** · Windows 10/11 · Gratuit · Version autonome disponible
+**Version 3.7.0** · Windows 10/11 · Gratuit · Version autonome disponible
 
 Danoë Studio transforme vos chapitres Markdown en livres brochés professionnels conformes **Amazon KDP** : Word (.docx), PDF KDP et EPUB 3, avec lettrines, en-têtes, table des matières dynamique et images 300 DPI.
 
@@ -10,13 +10,29 @@ Danoë Studio transforme vos chapitres Markdown en livres brochés professionnel
 
 ## 📥 Téléchargement
 
-👉 **[Télécharger la version Windows autonome v3.6.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.6.0)**
+👉 **[Télécharger la version Windows autonome v3.7.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.7.0)**
 
 La version autonome contient l’application Windows, le runtime Flutter, Python 3.12 et les dépendances du backend. **Aucun téléchargement de Flutter ou Python n’est nécessaire.**
 
-Téléchargez l’archive disponible dans la [Release v3.6.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.6.0), décompressez-la puis lancez `danoestudio.exe`.
+Téléchargez l’archive disponible dans la [Release v3.7.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.7.0), décompressez-la puis lancez `danoestudio.exe`.
 
 Une archive portable plus légère, sans Python embarqué, est également disponible dans cette release.
+
+---
+
+## ✨ Nouveautés v3.7.0
+
+### 🛠️ Corrections de génération Word
+- Correction de l’alerte Word à l’ouverture du document : suppression du déclenchement automatique de la mise à jour des champs externes.
+- Les fichiers DOCX générés restent stables et s’ouvrent sans la fenêtre “Ce document contient des champs…”.
+- Amélioration de la génération de la table des matières et de la mise en page finale.
+
+### 📚 Organisation éditoriale
+- Ajout d’une action de renommage des chapitres directement depuis le menu Organisation.
+- Gestion plus claire des éléments de structure (actes, chapitres, images) dans l’écran d’accueil.
+
+### 🧩 Robustesse
+- Stabilisation du build Windows release et préparation du paquet de publication GitHub.
 
 ---
 
@@ -164,6 +180,7 @@ Dans l’archive autonome distribuée, le runtime Python est placé dans `python
 
 | Version | Apports |
 |---|---|
+| **v3.7.0** | Correction des champs Word à l’ouverture, renommage des chapitres, build Windows release stabilisé |
 | **v3.6.0** | Générateurs Word/PDF/EPUB consolidés, texte justifié, validations KDP et corrections éditoriales |
 | **v3.5.0** | Version Windows autonome, plume de progression, fermeture avec nettoyage du cache |
 | **v3.3** | Registre affiché, compilation Flutter réparée, correctifs idempotents |

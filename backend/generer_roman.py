@@ -1413,9 +1413,20 @@ def ajouter_table_des_matieres_fin(document, titre="Table des matières"):
 
 
 def forcer_mise_a_jour_des_champs(document):
-    u = OxmlElement("w:updateFields")
-    u.set(qn("w:val"), "true")
-    document.settings.element.append(u)
+    # Empêche Word de demander la mise à jour des champs à l'ouverture du document.
+    # Cette alerte apparaît notamment lorsqu'un TOC ou d'autres champs sont marqués
+    # pour mise à jour automatique ; pour l'usage KDP, on laisse le document stable
+    # et on demande à l'utilisateur d'actualiser manuellement si nécessaire.
+    try:
+        existing = document.settings.element.find(qn("w:updateFields"))
+        if existing is not None:
+            existing.set(qn("w:val"), "false")
+            return
+        u = OxmlElement("w:updateFields")
+        u.set(qn("w:val"), "false")
+        document.settings.element.append(u)
+    except Exception:
+        pass
 
 # ─────────────────────────────────────────────
 # 10. PAGES RÉELLES & STATISTIQUES

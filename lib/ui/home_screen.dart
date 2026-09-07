@@ -578,6 +578,27 @@ class _HomeScreenState extends State<HomeScreen>
                 ]));
   }
 
+  Future<void> _renommerChapitre(int i) async {
+    final e = _organisation[i];
+    final type = (e['type'] ?? '').toString();
+    if (type != 'chapitre') return;
+
+    final ancien =
+        (e['titre'] ?? e['chapitre_ligne1'] ?? e['fichier_source'] ?? '')
+            .toString();
+    final nouveau =
+        await _saisirTexte('Renommer le chapitre', 'Nouveau titre du chapitre');
+    if (nouveau == null || nouveau.trim().isEmpty) return;
+    final titre = nouveau.trim();
+
+    setState(() {
+      e['titre'] = titre;
+      e['chapitre_ligne1'] = titre;
+    });
+    _sauverOrganisation();
+    _log('✏️ Chapitre renommé : $ancien → $titre', kind: LogKind.ok);
+  }
+
   Future<void> _ajouterActe() async {
     final nom = await _saisirTexte('Nouvel acte', "Nom de l'acte");
     if (nom == null || nom.trim().isEmpty) return;
@@ -1824,6 +1845,10 @@ class _HomeScreenState extends State<HomeScreen>
                                   style: AntiqueTheme.bodyText.copyWith(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700))),
+                          if (t == 'chapitre')
+                            _miniBtn('✏', () => _renommerChapitre(i),
+                                label: 'Renommer le chapitre'),
+                          const SizedBox(width: 4),
                           _miniBtn('▲', () => _monter(i)),
                           const SizedBox(width: 4),
                           _miniBtn('▼', () => _descendre(i)),
@@ -1834,9 +1859,9 @@ class _HomeScreenState extends State<HomeScreen>
         ]));
   }
 
-  Widget _miniBtn(String s, VoidCallback onTap) {
+  Widget _miniBtn(String s, VoidCallback onTap, {String? label}) {
     var focused = false;
-    final label = s == '🗑' ? 'Supprimer' : 'Déplacer $s';
+    final resolved = label ?? (s == '🗑' ? 'Supprimer' : 'Déplacer $s');
     return StatefulBuilder(
       builder: (context, setLocalState) => FocusableActionDetector(
         onShowFocusHighlight: (value) {
@@ -1855,9 +1880,9 @@ class _HomeScreenState extends State<HomeScreen>
           },
           child: Semantics(
             button: true,
-            label: label,
+            label: resolved,
             child: Tooltip(
-              message: label,
+              message: resolved,
               child: InkWell(
                 onTap: onTap,
                 borderRadius: BorderRadius.circular(4),
