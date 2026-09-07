@@ -81,6 +81,8 @@ STATS_CHAPITRES = []
 SANS_TITRE = ('1.1',)
 
 import regles as _R
+from glossaire_shared import (extraire_definitions_glossaire,
+                              glossaire_texte, remplacer_references_texte)
 FORMATS_LIVRE = _R.FORMATS_LIVRE
 
 # ─────────────────────────────────────────────
@@ -808,7 +810,9 @@ def charger_chapitre(cfg):
         texte = texte.replace(a, b)
     while '  ' in texte:
         texte = texte.replace('  ', ' ')
-    lignes = [l.strip() for l in texte.splitlines()]
+    corps, defs = extraire_definitions_glossaire(texte)
+    glossaire_actif = bool(lire_annexes().get('glossaire', False))
+    lignes = [l.strip() for l in corps.splitlines()]
     if lignes and lignes[0] == '---':
         for j in range(1, len(lignes)):
             if lignes[j] == '---':
@@ -818,6 +822,7 @@ def charger_chapitre(cfg):
     for l in lignes:
         if not l or META_RE.match(l):
             continue
+        l = remplacer_references_texte(l, active=glossaire_actif)
         if cfg.get('skip_titre') and l == cfg['skip_titre']:
             continue
         if l.startswith('## '):
@@ -840,6 +845,8 @@ def charger_chapitre(cfg):
         items.pop(0)
     while items and items[0][0] == 'sep':
         items.pop(0)
+    if lire_annexes().get('glossaire', False) and defs:
+        items.append(('glossaire', defs))
     paras = [t for k, t in items if k == 'p']
     mots_ch = sum(len(t.split()) for t in paras)
     dia_ch = sum(1 for t in paras if t.startswith('—'))
@@ -1230,6 +1237,18 @@ def ajouter_chapitre(titre, items, sans_titre=False):
             p = doc.add_paragraph()
             p.style = styles['SeparateurScene']
             run_style(p, '--- ✦ ---', POLICE_CORPS, TC)
+        elif kind == 'glossaire':
+            doc.add_page_break()
+            p = doc.add_paragraph()
+            p.style = styles['TitreSousChap']
+            run_style(p, 'Glossaire', POLICE_CORPS, STYLE['taille_sous'], True)
+            ligne_vide(1)
+            for ident, desc in texte.items():
+                p = doc.add_paragraph()
+                p.style = styles['CorpsTexte']
+                run_style(p, f'{ident}', POLICE_CORPS, TC, True)
+                run_style(p, f' — {desc}', POLICE_CORPS, TC)
+            premier = False
         else:
             paragraphe_corps(texte, initiale_grasse=premier, retrait=premier)
             premier = False

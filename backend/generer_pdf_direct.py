@@ -30,6 +30,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from pypdf import PdfReader, PdfWriter
 import regles as _R
+from glossaire_shared import extraire_definitions_glossaire, remplacer_references_texte
 
 FORMATS_LIVRE = _R.FORMATS_LIVRE
 KDP_MARGES = [(maxi, gutter, _R.MARGES_EXTERIEURES_KDP[index][1])
@@ -260,9 +261,12 @@ def charger_chapitre(fichier, skip_titre):
             for a, b in corr: texte = texte.replace(a, b)
     texte = _nettoie_espaces(texte)
     while '  ' in texte: texte = texte.replace('  ', ' ')
+    corps, defs = extraire_definitions_glossaire(texte)
+    glossaire_actif = bool(lire_annexes().get('glossaire', False))
     items = []
-    for l in [x.strip() for x in texte.splitlines()]:
+    for l in [x.strip() for x in corps.splitlines()]:
         if not l or META_RE.match(l) or l == skip_titre: continue
+        l = remplacer_references_texte(l, active=glossaire_actif)
         if l.startswith('## '): items.append(('h2', l[3:].strip()))
         elif l.startswith('# '): items.append(('h1', l[2:].strip()))
         elif l in ('---', '***', '___'): items.append(('sep', None))
@@ -271,6 +275,8 @@ def charger_chapitre(fichier, skip_titre):
                 for rx, rp in REGEX_PENSEES: l = rx.sub(rp, l)
             items.append(('p', l))
     while items and items[0][0] == 'sep': items.pop(0)
+    if lire_annexes().get('glossaire') and defs:
+        items.append(('glossaire', defs))
     return items
 
 # ── images HD N&B ──
@@ -574,6 +580,12 @@ def generer(safe=False):
                 if k == 'h1': st += [PageBreak(), Paragraph(escape(t), st_ch1_corps)]; premier = True
                 elif k == 'h2': st += [PageBreak(), Paragraph(escape(t), st_sous_corps)]; premier = True
                 elif k == 'sep': st.append(Paragraph('--- ✦ ---', st_sep))
+                elif k == 'glossaire':
+                    st += [PageBreak(), Paragraph('Glossaire', st_acte)]
+                    for ident, desc in t.items():
+                        st.append(Paragraph(
+                            f'<b>{escape(ident)}</b> — {escape(desc)}', st_lim))
+                    premier = False
                 else:
                     st.append(para(t, st_debut if premier else st_corps, gras_debut=premier))
                     premier = False

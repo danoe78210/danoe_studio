@@ -170,6 +170,7 @@ class _HomeScreenState extends State<HomeScreen>
   final TextEditingController _iDedicace = TextEditingController();
   final TextEditingController _iEpigraphe = TextEditingController();
   final TextEditingController _iRemerciements = TextEditingController();
+  bool _iGlossaire = false;
   String? _iFrontispice;
   String? _iPreface;
   String? _iPostface;
@@ -427,6 +428,10 @@ class _HomeScreenState extends State<HomeScreen>
       _iSommaire = sv is bool
           ? sv
           : (sv == null ? true : sv.toString().toLowerCase() != 'false');
+      final gv = inf['glossaire'];
+      _iGlossaire = gv is bool
+          ? gv
+          : (gv == null ? false : gv.toString().toLowerCase() != 'false');
       _iAnnee.text = g('année de publication');
       _iIsbn.text = g('isbn');
       _iDepotLegal.text =
@@ -475,6 +480,7 @@ class _HomeScreenState extends State<HomeScreen>
         'postface': _iPostface ?? '',
         'Autres livres du même auteur': _iAutresLivres.text,
         'sommaire': _iSommaire,
+        'glossaire': _iGlossaire,
         'dédicace': _iDedicace.text,
         'épigraphe': _iEpigraphe.text,
       };
@@ -1581,6 +1587,7 @@ class _HomeScreenState extends State<HomeScreen>
       _champDropdownChapitres('Préface', _iPreface),
       _champDropdownChapitres('Postface', _iPostface),
       _caseSommaire(),
+      _caseGlossaire(),
       const SizedBox(height: 12),
     ]);
   }
@@ -1601,6 +1608,30 @@ class _HomeScreenState extends State<HomeScreen>
           const SizedBox(width: 10),
           Expanded(
               child: Text('Sommaire (table des matières dans le livre)',
+                  style: GoogleFonts.cinzel(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AntiqueTheme.bloodInk,
+                      letterSpacing: 1))),
+        ]));
+  }
+
+  Widget _caseGlossaire() {
+    return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(children: [
+          SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                  value: _iGlossaire,
+                  checkColor: AntiqueTheme.parchment,
+                  activeColor: AntiqueTheme.bloodInk,
+                  side: const BorderSide(color: AntiqueTheme.brass),
+                  onChanged: (v) => setState(() => _iGlossaire = v ?? false))),
+          const SizedBox(width: 10),
+          Expanded(
+              child: Text('Glossaire (définitions de mots cliquables)',
                   style: GoogleFonts.cinzel(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,

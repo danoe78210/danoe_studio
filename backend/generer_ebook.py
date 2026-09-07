@@ -66,6 +66,12 @@ try:
 except ImportError:
     plan_livre = None
 
+try:
+    from glossaire_shared import extraire_definitions_glossaire, format_glossaire_html
+except ImportError:
+    extraire_definitions_glossaire = None
+    format_glossaire_html = None
+
 if getattr(sys, 'frozen', False):
     BASE = os.path.dirname(sys.executable)
 else:
@@ -109,6 +115,7 @@ JSON_INFOS_KEYS = {
     DEDICACE: 'dedicace', EPIGRAPHE: 'epigraphe',
 }
 
+GLOSSAIRE_ACTIF = False
 COVER_W, COVER_H = 1600, 2560
 
 CONTAINER_XML = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -121,13 +128,31 @@ CONTAINER_XML = '''<?xml version="1.0" encoding="UTF-8"?>
 
 CSS_EBOOK = b"""
 @charset "UTF-8";
-body { font-family: serif; text-align: justify; line-height: 1.5; margin: 1em; }
+body {
+  font-family: "Times New Roman", Georgia, serif;
+  font-size: 1em;
+  text-align: justify;
+  line-height: 1.6;
+  margin: 1em 1.1em;
+}
 h1 { text-align: center; page-break-before: always; margin: 2em 0 1em; font-size: 1.8em; }
 h2 { text-align: center; page-break-before: always; margin: 1.5em 0 0.8em; font-size: 1.4em; }
 h3 { text-align: center; page-break-before: always; margin: 1.2em 0 0.6em; font-size: 1.2em; }
-p { text-indent: 0.5cm; margin: 0.3em 0; }
+p {
+  text-align: justify;
+  text-indent: 1.2em;
+  margin: 0 0 0.7em 0;
+}
 p.first { text-indent: 0; }
 p.sep { text-align: center; margin: 1em 0; text-indent: 0; font-size: 1.1em; letter-spacing: 0.3em; }
+.note-ref { font-size: 0.75em; vertical-align: super; }
+.note-ref a { color: #234; text-decoration: underline; }
+.notes { margin-top: 1.5em; border-top: 1px solid #d6c6a8; padding-top: 0.8em; }
+.notes h3 { text-align: left; font-size: 1.1em; margin: 0 0 0.5em; }
+.notes ol { margin: 0; padding-left: 1.4em; }
+.notes li { margin: 0.35em 0; }
+.notes .glossary-term { font-weight: 700; }
+.notes a { color: #234; }
 .title-page { text-align: center; margin: 3em 1em; page-break-after: always; }
 .title-page h1 { font-size: 2.2em; margin: 2em 0 0.5em; letter-spacing: 0.05em; page-break-before: never; }
 .title-page .subtitle { font-size: 1.3em; margin: 0.5em 0 2em; font-style: italic; }
@@ -230,7 +255,8 @@ def lire_infos():
 
 def lire_annexes():
     """Lit les champs annexes du menu Informations (clés FR ou snake)."""
-    ax = {'sommaire': True}
+    global GLOSSAIRE_ACTIF
+    ax = {'sommaire': True, 'glossaire': False}
     j = {}
     try:
         import json
@@ -252,16 +278,71 @@ def lire_annexes():
     ax['postface'] = g('postface', 'Postface')
     sv = j.get('sommaire')
     ax['sommaire'] = sv if isinstance(sv, bool) else (str(sv).strip().lower() != 'false' if sv is not None else True)
+    gv = j.get('glossaire')
+    ax['glossaire'] = gv if isinstance(gv, bool) else (str(gv).strip().lower() != 'false' if gv is not None else False)
+    GLOSSAIRE_ACTIF = bool(ax['glossaire'])
     return ax
+
+def _extraire_notes_inline(texte):
+    """Sépare les définitions de notes du corps du texte. Format attendu : [^id]: définition."""
+    if extraire_definitions_glossaire is not None:
+        return extraire_definitions_glossaire(texte)
+    lignes = []
+    defs = {}
+    for ln in str(texte).splitlines():
+        m = re.match(r'^\[\^([^\]]+)\]:\s*(.*)$', ln.strip())
+        if m:
+            defs[m.group(1)] = m.group(2).strip()
+        else:
+            lignes.append(ln)
+    return '\n'.join(lignes), defs
+
+
+def _convertir_notes_html(texte):
+    """Remplace les références [^id] par des liens internes vers leur définition si le mode glossaire est actif."""
+    if not GLOSSAIRE_ACTIF:
+        return html_escape(normaliser_texte_editorial(str(texte)))
+    texte = html_escape(normaliser_texte_editorial(str(texte)))
+    return re.sub(r'\[\^([A-Za-z0-9_-]+)\]',
+                  r'<sup class="note-ref"><a href="#note-\1" id="ref-\1">[\1]</a></sup>',
+                  texte)
+
+
+def _notes_html(texte):
+    corps, defs = _extraire_notes_inline(texte)
+    if not defs:
+        return _convertir_notes_html(corps)
+    if format_glossaire_html is not None:
+        notes = format_glossaire_html(defs, titre='Glossaire')
+    else:
+        items = []
+        for ident, desc in defs.items():
+            clean = html_escape(normaliser_texte_editorial(desc))
+            items.append(f'<li id="note-{ident}"><a href="#ref-{ident}" aria-label="Retour au mot">↩</a> {clean}</li>')
+        notes = '<div class="notes"><h3>Glossaire</h3><ol>' + ''.join(items) + '</ol></div>'
+    return _convertir_notes_html(corps) + notes
+
 
 def _md_to_html(txt):
     out = []
-    for ln in txt.split('\n'):
+    body, defs = _extraire_notes_inline(txt)
+    for ln in body.split('\n'):
         ln = ln.rstrip()
         if not ln.strip() or ln.startswith('# '): continue
-        ln = html_escape(normaliser_texte_editorial(ln))
-        if ln.startswith('## '): out.append('<h2>%s</h2>' % ln[3:].strip())
-        else: out.append('<p>%s</p>' % ln)
+        ln = _convertir_notes_html(ln)
+        if ln.startswith('## '):
+            out.append('<h2>%s</h2>' % ln[3:].strip())
+        else:
+            out.append('<p>%s</p>' % ln)
+    if GLOSSAIRE_ACTIF and defs:
+        if format_glossaire_html is not None:
+            out.append(format_glossaire_html(defs, titre='Glossaire'))
+        else:
+            items = []
+            for ident, desc in defs.items():
+                clean = html_escape(normaliser_texte_editorial(desc))
+                items.append(f'<li id="note-{ident}"><a href="#ref-{ident}" aria-label="Retour au mot">↩</a> {clean}</li>')
+            out.append('<div class="notes"><h3>Glossaire</h3><ol>' + ''.join(items) + '</ol></div>')
     return ''.join(out)
 
 
@@ -406,7 +487,7 @@ def normaliser_texte_editorial(texte):
 def runs_to_html(paragraph):
     parts = []
     for run in paragraph.runs:
-        t = html_escape(normaliser_texte_editorial(run.text))
+        t = _convertir_notes_html(normaliser_texte_editorial(run.text))
         if not t:
             continue
         if run.bold and run.italic:
@@ -799,9 +880,10 @@ def verifier_epub(chemin):
                 ok = False
 
             imgs = [n for n in noms if n.startswith('OEBPS/images/')]
-            print(f'   ✅ {len(imgs)} image(s) intégrée(s)' if imgs
-                  else '   ⚠️  Aucune image intégrée')
-            ok = ok and bool(imgs)
+            if imgs:
+                print(f'   ✅ {len(imgs)} image(s) intégrée(s)')
+            else:
+                print('   ℹ️  Aucune image intégrée (OK pour un ebook sans illustration).')
 
             opf_root = ET.fromstring(z.read('OEBPS/content.opf'))
             ns = {'opf': 'http://www.idpf.org/2007/opf'}

@@ -1,6 +1,6 @@
 # 🖋️ Danoë Studio — Machine à romans pour écrivains
 
-**Version 3.7.0** · Windows 10/11 · Gratuit · Version autonome disponible
+**Version 3.8.0** · Windows 10/11 · Gratuit · Version autonome disponible
 
 Danoë Studio transforme vos chapitres Markdown en livres brochés professionnels conformes **Amazon KDP** : Word (.docx), PDF KDP et EPUB 3, avec lettrines, en-têtes, table des matières dynamique et images 300 DPI.
 
@@ -10,15 +10,29 @@ Danoë Studio transforme vos chapitres Markdown en livres brochés professionnel
 
 ## 📥 Téléchargement
 
-👉 **[Télécharger la version Windows autonome v3.7.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.7.0)**
+👉 **[Télécharger la version Windows autonome v3.8.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.8.0)**
 
 La version autonome contient l’application Windows, le runtime Flutter, Python 3.12 et les dépendances du backend. **Aucun téléchargement de Flutter ou Python n’est nécessaire.**
 
-Téléchargez l’archive disponible dans la [Release v3.7.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.7.0), décompressez-la puis lancez `danoestudio.exe`.
+Téléchargez l’archive disponible dans la [Release v3.8.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.8.0), décompressez-la puis lancez `danoestudio.exe`.
 
 Une archive portable plus légère, sans Python embarqué, est également disponible dans cette release.
 
 ---
+
+## ✨ Nouveautés v3.8.0
+
+### 📚 Mode glossaire
+- Références Markdown avec la syntaxe `[^identifiant]`.
+- Section Glossaire générée en fin de chapitre dans Word et PDF.
+- Références et retours cliquables dans l’EPUB.
+- Documentation utilisateur disponible dans [le guide du glossaire](docs/guide-glossaire.md).
+
+### 🧩 Backend et robustesse
+- Traitement partagé des définitions entre Word, PDF et EPUB.
+- Prise en charge des définitions sur plusieurs lignes.
+- Échappement HTML et validation des identifiants de glossaire.
+- Tests ciblés du traitement glossaire.
 
 ## ✨ Nouveautés v3.7.0
 
@@ -180,6 +194,7 @@ Dans l’archive autonome distribuée, le runtime Python est placé dans `python
 
 | Version | Apports |
 |---|---|
+| **v3.8.0** | Mode glossaire pour Word, PDF et EPUB, guide utilisateur, références internes et robustesse du backend |
 | **v3.7.0** | Correction des champs Word à l’ouverture, renommage des chapitres, build Windows release stabilisé |
 | **v3.6.0** | Générateurs Word/PDF/EPUB consolidés, texte justifié, validations KDP et corrections éditoriales |
 | **v3.5.0** | Version Windows autonome, plume de progression, fermeture avec nettoyage du cache |
