@@ -1614,6 +1614,54 @@ def maj_champs_word(nom_fichier):
                 pass
 
 
+def corriger_doubles_pages_blanches(nom_fichier):
+    # Fusionne deux pages blanches consécutives en une seule (pagination KDP propre)
+    try:
+        import win32com.client  # noqa
+    except ImportError:
+        print('   ℹ️  pywin32 absent → vérification des pages blanches ignorée')
+        return
+    d = None
+    try:
+        word = _word_app()
+        chemin = os.path.abspath(nom_fichier)
+        d = word.Documents.Open(chemin, False, False, False)
+        nb_pages = d.ComputeStatistics(2)
+        max_iterations = nb_pages
+        iterations = 0
+        page = 1
+        while page < nb_pages and iterations < max_iterations:
+            iterations += 1
+            debut = d.GoTo(What=1, Which=1, Count=page).Start
+            fin = d.GoTo(What=1, Which=1, Count=page + 1).Start if page + 1 <= nb_pages else d.Content.End
+            plage = d.Range(debut, fin)
+            texte_vide = plage.Text.replace('\r', '').replace('\x0c', '').replace('\x0b', '').strip() == ''
+            if not texte_vide:
+                page += 1
+                continue
+            debut_suiv = d.GoTo(What=1, Which=1, Count=page + 1).Start
+            fin_suiv = d.GoTo(What=1, Which=1, Count=page + 2).Start if page + 2 <= nb_pages else d.Content.End
+            plage_suiv = d.Range(debut_suiv, fin_suiv)
+            texte_suiv_vide = plage_suiv.Text.replace('\r', '').replace('\x0c', '').replace('\x0b', '').strip() == ''
+            if texte_suiv_vide:
+                plage.Delete()   # fusionne les deux pages blanches en une seule
+                nb_pages = d.ComputeStatistics(2)
+            else:
+                page += 1
+        d.Save()
+        d.Close(False)
+        d = None
+        print('   🧹 Pages blanches consécutives vérifiées.')
+    except Exception as e:
+        print('   ⚠️  Vérification des pages blanches impossible : ' + str(e))
+    finally:
+        if d is not None:
+            try:
+                d.Close(False)
+            except Exception:
+                pass
+
+
 def fmt(n):
     return format(n, ',').replace(',', ' ')
 
@@ -1926,6 +1974,8 @@ def main():
         nom_fichier = enregistrer_docx_securise(doc, nom_fichier)
         reordonner_structure_word_file(nom_fichier)
         print('   📚 Structure éditoriale appliquée au Word.')
+        print('   🧹 Vérification des pages blanches consécutives…')
+        corriger_doubles_pages_blanches(nom_fichier)
     except Exception as e:
         print('   ⚠️ Réordonnancement Word ignoré :', e)
     afficher_statistiques(pages_reelles, titre_aff)

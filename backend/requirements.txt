@@ -1,0 +1,27 @@
+# requirements.txt — Danoe Studio backend Python
+# Versions figées depuis .venv (pip freeze) — mettre à jour après tout ajout de paquet.
+
+# Génération documentaire (Word / DOCX)
+python-docx==1.2.0
+
+# Génération PDF native (mise en page KDP)
+reportlab==5.0.1
+pypdf==6.17.0
+
+# Traitement d'images (couvertures, illustrations EPUB/PDF/Word)
+pillow==12.3.0
+
+# Lecture/écriture de configuration Excel (repli de configuration_store.py)
+openpyxl==3.1.5
+
+# Automatisation Word (conversion .docx → .pdf) — Windows uniquement
+pywin32==312 ; sys_platform == "win32"
+
+# Client HTTP (spellchecker.py : LanguageTool ; interface_livre.py)
+requests==2.34.2
+
+# Interface legacy Tkinter (configuration_ui.py, interface_livre.py)
+customtkinter==6.0.0
+
+# Tests (dev uniquement)
+pytest==9.1.1
