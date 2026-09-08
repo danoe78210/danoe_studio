@@ -1,0 +1,62 @@
+{
+  "style": {
+    "police_corps": "Arial",
+    "police_titres": "Cinzel",
+    "police_lettrine": "Cinzel",
+    "taille_corps_pt": 11.0,
+    "taille_titres_acte_pt": 16.0,
+    "taille_chapitre_ligne1_pt": 14.0,
+    "taille_chapitre_ligne2_pt": 13.0,
+    "taille_sous_chapitre_pt": 12.0,
+    "interligne_corps": 1.5,
+    "format_livre": "17,78 x 25,4 cm (7 x 10 po)",
+    "format_kdp": "17,78 x 25,4 cm (7 x 10 po)"
+  },
+  "format_livre": "17,78 x 25,4 cm (7 x 10 po)",
+  "chapitres": [
+    {
+      "type": "acte",
+      "acte": "Acte I"
+    },
+    {
+      "type": "chapitre",
+      "fichier_source": "chapitre-01-le-dernier-soir",
+      "chapitre_ligne1": "Chapitre 1, le dernier soir",
+      "titre": "Chapitre 1, le dernier soir"
+    },
+    {
+      "type": "chapitre",
+      "fichier_source": "chapitre-02-la-naissance-du-cristal",
+      "chapitre_ligne1": "Chapitre 2, la naissance du cristal",
+      "titre": "Chapitre 2, la naissance du cristal"
+    }
+  ],
+  "informations": {
+    "titre complet du roman": "Les Schattenjagers",
+    "sous-titre éventuel": "Tome2, Hildegarde",
+    "nom de l'auteur (couverture)": "Danoë",
+    "année de publication": "2026",
+    "isbn": "",
+    "dépôt légal": "",
+    "depot_legal": "",
+    "mention de copyright": "",
+    "mention_copyright": "",
+    "édition": "",
+    "edition": "",
+    "site web": "https://danoeecrivain.net/",
+    "site_web": "https://danoeecrivain.net/",
+    "avertissement": "",
+    "editeur": "Amazon",
+    "Éditeur": "Amazon",
+    "autres_livres": "Tome 1,  Nunael",
+    "remerciements": "",
+    "frontispice": "frontispice_test",
+    "preface": "preface_test",
+    "postface": "postface_test",
+    "Autres livres du même auteur": "Tome 1,  Nunael",
+    "sommaire": true,
+    "glossaire": true,
+    "dédicace": "",
+    "épigraphe": ""
+  }
+}
