@@ -1678,9 +1678,10 @@ def main():
     doc.add_page_break()
     doc.add_page_break()
     ajouter_page_faux_titre(infos)
-    doc.add_page_break()
-    ajouter_page_frontispice()
-    doc.add_page_break()
+    if chemin_frontispice(lire_annexes().get('frontispice')):
+        doc.add_page_break()
+        ajouter_page_frontispice()
+        doc.add_page_break()
     ajouter_page_titre(infos)
     ajouter_page_copyright(infos)
     ajouter_page_avertissement(infos)

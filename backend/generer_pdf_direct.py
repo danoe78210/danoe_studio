@@ -252,10 +252,23 @@ def _nettoie_espaces(t):
     t = t.replace('\u2011', '-')
     return t
 
+
+def _retirer_front_matter_yaml(texte):
+    """Retire le front matter YAML initial sans toucher au corps Markdown."""
+    lignes = texte.splitlines()
+    if not lignes or lignes[0].strip() != '---':
+        return texte
+    for index in range(1, len(lignes)):
+        if lignes[index].strip() in ('---', '...'):
+            return '\n'.join(lignes[index + 1:])
+    return texte
+
+
 def charger_chapitre(fichier, skip_titre, acte='', chapitre='', glossaire=None):
     cand = glob.glob(os.path.join(DOSSIER_CHAPITRES, fichier + '*.md'))
     if not cand: return None
     texte = open(cand[0], encoding='utf-8').read()
+    texte = _retirer_front_matter_yaml(texte)
     for a, b in CORRECTIONS_COMMUNES: texte = texte.replace(a, b)
     for a, b in _R.corrections_pour(fichier): texte = texte.replace(a, b)
     for pref, corr in CORR_PAR_PREFIXE.items():

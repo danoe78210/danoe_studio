@@ -8,7 +8,9 @@ from glossaire_shared import (extraire_definitions_glossaire,
                               GlossaireLivre,
                               remplacer_references_glossaire,
                               remplacer_references_texte)
+import generer_ebook
 from generer_ebook import runs_to_html
+from generer_pdf_direct import _retirer_front_matter_yaml
 
 
 def test_extraire_definitions_glossaire():
@@ -25,6 +27,16 @@ Le diamant garde un secret.
     assert 'Le diamant garde un secret.' in corps
     assert defs['scriptorium'] == 'salle de copie et de travail intellectuel.'
     assert defs['rune'] == 'signe de pouvoir ou de connaissance.'
+
+
+def test_front_matter_yaml_initial_n_est_pas_rendu_dans_le_pdf():
+    texte = '---\ntitle: Chapitre test\ntome: 2\n---\n\n# Titre\n\nCorps du chapitre.'
+
+    corps = _retirer_front_matter_yaml(texte)
+
+    assert 'title: Chapitre test' not in corps
+    assert '# Titre' in corps
+    assert 'Corps du chapitre.' in corps
 
 
 def test_definitions_multilignes_et_identifiants_invalides_ignores():
@@ -88,11 +100,11 @@ def test_format_html_collecteur_est_numerote():
     assert '<strong class="glossary-term">[1] rune</strong>' in html
 
 
-def test_page_par_defaut_est_un_placeholder_honnete():
+def test_page_par_defaut_est_vide():
     glossaire = GlossaireLivre()
     glossaire.enregistrer({'rune': 'Signe ancien'})
 
-    assert glossaire.entrees[0].page == 'à calculer après pagination'
+    assert glossaire.entrees[0].page == ''
 
 
 def test_entree_word_est_une_cible_epub_numerotee():
@@ -110,3 +122,27 @@ def test_entree_word_est_une_cible_epub_numerotee():
     assert 'id="note-1"' in html
     assert '[1]' in html
     assert 'définition : Signe ancien' in html
+
+
+def test_epub_ne_transforme_pas_les_indices_si_glossaire_desactive():
+    generer_ebook.GLOSSAIRE_ACTIF = False
+
+    assert generer_ebook._convertir_numeros_glossaire_html('Voir [1].') == 'Voir [1].'
+
+
+def test_epub_transformer_les_indices_si_glossaire_actif():
+    generer_ebook.GLOSSAIRE_ACTIF = True
+
+    html = generer_ebook._convertir_numeros_glossaire_html('Voir [1].')
+
+    assert 'href="#note-1"' in html
+    assert '[1]' in html
+
+
+def test_epub_ne_genere_pas_de_glossaire_si_desactive():
+    generer_ebook.GLOSSAIRE_ACTIF = False
+
+    html = generer_ebook._notes_html('Voir [^rune].\n\n[^rune]: Signe ancien')
+
+    assert 'Glossaire' not in html
+    assert html == 'Voir [^rune].\n'

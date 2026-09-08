@@ -29,7 +29,7 @@ class GlossaireLivre:
         self.entrees.clear()
         self._par_identifiant.clear()
 
-    def enregistrer(self, defs, acte='', chapitre='', page='à calculer après pagination'):
+    def enregistrer(self, defs, acte='', chapitre='', page=''):
         for ident, definition in defs.items():
             if ident not in self._par_identifiant:
                 entree = EntreeGlossaire(

@@ -315,6 +315,8 @@ def _convertir_numeros_glossaire_html(texte):
     epub:type="noteref" active l'affichage en bulle (popup footnote EPUB3)
     sur Kindle / Apple Books / Google Play Books, sans navigation de page.
     """
+    if not GLOSSAIRE_ACTIF:
+        return texte
     return re.sub(
         r'\[(\d+)\]',
         r'<sup class="glossary-number"><a epub:type="noteref" href="#note-\1" '
@@ -325,6 +327,8 @@ def _convertir_numeros_glossaire_html(texte):
 
 def _notes_html(texte):
     corps, defs = _extraire_notes_inline(texte)
+    if not GLOSSAIRE_ACTIF:
+        return _convertir_notes_html(corps)
     if not defs:
         return _convertir_notes_html(corps)
     if format_glossaire_html is not None:
