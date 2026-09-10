@@ -2,7 +2,7 @@ name: danoestudio
 description: "Danoë Studio — Machine à romans pour écrivains indépendants."
 publish_to: 'none'
 
-version: 3.8.0+38
+version: 3.8.1+39
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

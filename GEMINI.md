@@ -61,204 +61,34 @@ parchemin, cuir, laiton, or patine, lettrines, rubans et typographies editoriale
 \- `backend/` contient les scripts Python de generation.
 
 \- `assets/` contient les ressources graphiques.
+# Danoe Studio - contexte court
 
-\- `docs/` contient le site et la documentation KDP.
+Danoe Studio est une application Flutter desktop, principalement Windows, qui
+transforme des chapitres Markdown en Word, PDF KDP et EPUB via `backend/` Python.
 
+## Regles universelles
 
+- Repondre en francais. Modifier uniquement le perimetre utile.
+- Preserver les APIs et contrats existants ; ne pas inventer d'architecture.
+- Ne pas annuler les changements locaux. Corriger la cause racine.
+- Signaler les erreurs de fichier, JSON, processus et reseau ; ne rien ignorer.
+- Ajouter ou mettre a jour les tests si une logique metier ou un contrat change.
 
-L'ecran principal est `lib/ui/home\_screen.dart`.
+## Points sensibles
 
-Il contient actuellement une grande partie de l'etat, de la navigation,
+- `lib/ui/home_screen.dart` orchestre encore une grande partie de l'etat et de Python.
+- `PythonEngine` lit les sorties ligne par ligne ; les prefixes `PROGRESS:`,
+  `STATUS:`, `WARNING:`, `ERROR:` et `DONE:` sont un contrat Flutter/Python.
+- Configurations : `danoestudio_config.json`, `backend/Configuration_roman.json`.
+- Sources : `backend/Chapitres/`, `backend/Images/`. Sorties : `backend/export/`.
+- Utiliser `pathlib.Path` en Python et `package:path/path.dart` en Dart.
+- Preserver `AntiqueTheme`; ne pas creer une seconde source de tokens visuels.
 
-de la persistance, de l'acces aux fichiers et de l'orchestration Python.
+## Validation
 
-Toute modification de ce fichier doit rester ciblee.
+Lancer le test le plus proche, puis `flutter analyze`. Lancer `flutter test` pour
+un changement UI ou comportemental. Pour Python, utiliser la commande pytest
+pertinente. Indiquer les commandes impossibles ou echouees.
 
-
-
-\## Etat et services
-
-
-
-L'application n'utilise actuellement ni Provider, ni Riverpod, ni Bloc.
-
-L'etat est principalement local a `\_HomeScreenState` avec `setState`.
-
-
-
-Avant d'introduire une solution de gestion d'etat :
-
-1\. extraire d'abord la logique metier ou la persistance dans un service dedie ;
-
-2\. conserver les APIs existantes ;
-
-3\. justifier le gain de complexite ;
-
-4\. ajouter des tests sur le comportement extrait.
-
-
-
-`PythonEngine` lance les scripts Python et transmet stdout/stderr ligne par ligne.
-
-`SpellcheckerService` utilise l'API LanguageTool et decoupe les textes longs.
-
-
-
-Les contrats de progression entre Python et Flutter reposent actuellement sur
-
-des prefixes textuels. Toute modification de ces messages doit etre coordonnee
-
-entre `backend/` et `lib/ui/home\_screen.dart`.
-
-
-
-\## Persistance et fichiers
-
-
-
-\- Les configurations utilisateur sont stockees dans `danoestudio\_config.json`.
-
-\- La configuration de production est `Configuration\_roman.json`.
-
-\- Les exports sont places dans `backend/export/`.
-
-\- Les chapitres sont lus depuis `backend/Chapitres/`.
-
-\- Les images sont lues depuis `backend/Images/`.
-
-
-
-Preferer `package:path/path.dart` pour les nouveaux chemins.
-
-Ne pas ajouter de nouveaux chemins Windows en dur sauf contrainte specifique
-
-de l'integration Windows.
-
-
-
-Les erreurs de fichier, JSON, processus ou reseau ne doivent pas etre
-
-silencieusement ignorees. Les erreurs doivent etre journalisees et, lorsque
-
-possible, signalees a l'utilisateur.
-
-
-
-\## Flutter et Dart
-
-
-
-\- Preferer `withValues(alpha: ...)` a `withOpacity(...)`.
-
-\- Preferer `KeyEvent`, `KeyDownEvent` et `onKeyEvent` aux anciennes API clavier.
-
-\- Verifier `mounted` avant tout `setState` apres une operation asynchrone.
-
-\- Liberer tous les `TextEditingController`, `AnimationController`,
-
-&#x20; `ScrollController`, `Timer` et abonnements dans `dispose`.
-
-\- Utiliser `const` lorsque cela ameliore clairement le code.
-
-\- Eviter les operations synchrones de fichiers dans le thread UI pour les
-
-&#x20; traitements potentiellement longs.
-
-\- Preferer des modeles types aux `Map<String, dynamic>` pour les nouvelles
-
-&#x20; donnees metier.
-
-
-
-\## Interface
-
-
-
-Preserver l'identite visuelle existante et les tokens de `AntiqueTheme`.
-
-Ne pas introduire une nouvelle palette ou un nouveau systeme typographique
-
-sans demande explicite.
-
-
-
-Verifier les tailles desktop et les contraintes de mise en page.
-
-Eviter les debordements, les textes tronques sans raison et les controles
-
-inaccessibles au clavier.
-
-
-
-Le theme global doit rester coherent avec `AntiqueTheme.theme`.
-
-Ne pas creer une seconde source de verite pour les couleurs, les polices ou
-
-les surfaces.
-
-
-
-\## Tests et validation
-
-
-
-Apres toute modification :
-
-
-
-1\. lancer le test le plus proche du code modifie ;
-
-2\. lancer `flutter analyze` ;
-
-3\. lancer `flutter test` si le changement touche l'interface ou un comportement ;
-
-4\. signaler explicitement toute validation impossible.
-
-
-
-Le projet peut echouer avant l'analyse Flutter si le depot et le SDK Flutter
-
-sont situes sur des lecteurs Windows differents et qu'un plugin exige un lien
-
-symbolique. Dans ce cas, deplacer le projet ou le SDK sur le meme lecteur,
-
-puis relancer les commandes.
-
-
-
-Le test de demarrage doit utiliser exactement le nom de classe declare dans
-
-`lib/main.dart`.
-
-
-
-\## Format des reponses techniques
-
-
-
-Pour une demande de correction :
-
-\- identifier la cause racine ;
-
-\- citer les fichiers concernes ;
-
-\- proposer le changement minimal ;
-
-\- appliquer la modification si elle est demandee ;
-
-\- indiquer la validation executee et ses resultats.
-
-
-
-Pour une revue :
-
-\- lister d'abord les bugs, risques et regressions potentiels par severite ;
-
-\- mentionner ensuite les tests manquants ;
-
-\- terminer par un bref resume.
-
-
-
-Ne pas presenter comme valide un resultat qui n'a pas ete verifie.
-
+Les details specialises sont dans `docs/agents-reference/` et ne doivent etre
+ouverts que si la tache le justifie.

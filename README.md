@@ -1,6 +1,6 @@
 # 🖋️ Danoë Studio — Machine à romans pour écrivains
 
-**Version 3.8.0** · Windows 10/11 · Gratuit · Version autonome disponible
+**Version 3.8.1** · Windows 10/11 · Gratuit · Version autonome disponible
 
 Danoë Studio transforme vos chapitres Markdown en livres brochés professionnels conformes **Amazon KDP** : Word (.docx), PDF KDP et EPUB 3, avec lettrines, en-têtes, table des matières dynamique et images 300 DPI.
 
@@ -10,15 +10,22 @@ Danoë Studio transforme vos chapitres Markdown en livres brochés professionnel
 
 ## 📥 Téléchargement
 
-👉 **[Télécharger la version Windows autonome v3.8.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.8.0)**
+👉 **[Télécharger la version Windows autonome v3.8.1](https://github.com/danoe78210/danoe_studio/releases/tag/v3.8.1)**
 
 La version autonome contient l’application Windows, le runtime Flutter, Python 3.12 et les dépendances du backend. **Aucun téléchargement de Flutter ou Python n’est nécessaire.**
 
-Téléchargez l’archive disponible dans la [Release v3.8.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.8.0), décompressez-la puis lancez `danoestudio.exe`.
+Téléchargez l’archive disponible dans la [Release v3.8.1](https://github.com/danoe78210/danoe_studio/releases/tag/v3.8.1), décompressez-la puis lancez `danoestudio.exe`.
 
 Une archive portable plus légère, sans Python embarqué, est également disponible dans cette release.
 
 ---
+
+## ✨ Nouveautés v3.8.1
+
+### ⚡ Contexte IA optimisé
+- Routage des agents compact et chargement ponctuel des références détaillées.
+- Suppression du passage obligatoire par PAUL pour les tâches simples.
+- Handoff inter-agents limité à l’objectif, aux fichiers, aux contraintes, à la validation et à la sortie attendue.
 
 ## ✨ Nouveautés v3.8.0
 
@@ -194,6 +201,7 @@ Dans l’archive autonome distribuée, le runtime Python est placé dans `python
 
 | Version | Apports |
 |---|---|
+| **v3.8.1** | Optimisation des agents IA, réduction du contexte permanent et documentation de référence chargée ponctuellement |
 | **v3.8.0** | Mode glossaire pour Word, PDF et EPUB, guide utilisateur, références internes et robustesse du backend |
 | **v3.7.0** | Correction des champs Word à l’ouverture, renommage des chapitres, build Windows release stabilisé |
 | **v3.6.0** | Générateurs Word/PDF/EPUB consolidés, texte justifié, validations KDP et corrections éditoriales |
