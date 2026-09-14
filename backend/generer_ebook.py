@@ -34,6 +34,7 @@ import os
 import re
 import sys
 import glob
+import uuid
 import zipfile
 import io
 import time
@@ -118,13 +119,14 @@ JSON_INFOS_KEYS = {
 GLOSSAIRE_ACTIF = False
 COVER_W, COVER_H = 1600, 2560
 
-CONTAINER_XML = '''<?xml version="1.0" encoding="UTF-8"?>
-<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
-  <rootfiles>
-    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
-  </rootfiles>
-</container>
-'''
+CONTAINER_XML = (
+    '<?xml version="1.0" encoding="UTF-8"?>\n'
+    '<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">\n'
+    '  <rootfiles>\n'
+    '    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>\n'
+    '  </rootfiles>\n'
+    '</container>\n'
+)
 
 CSS_EBOOK = b"""
 @charset "UTF-8";
@@ -158,7 +160,7 @@ p.sep { text-align: center; margin: 1em 0; text-indent: 0; font-size: 1.1em; let
 .title-page h1 { font-size: 2.2em; margin: 2em 0 0.5em; letter-spacing: 0.05em; page-break-before: never; }
 .title-page .subtitle { font-size: 1.3em; margin: 0.5em 0 2em; font-style: italic; }
 .title-page .author { margin-top: 3em; font-size: 1.3em; }
-.copyright { page-break-after: always; font-size: 0.85em; margin: 2em; text-align: left; line-height: 1.4; }
+.copyright { min-height: 80vh; display: flex; flex-direction: column; justify-content: flex-end; page-break-after: always; font-size: 0.85em; margin: 2em; text-align: left; line-height: 1.4; }
 .dedication, .epigraph { text-align: center; font-style: italic; page-break-after: always; margin: 4em 2em; line-height: 1.6; }
 .dedication p, .epigraph p { text-indent: 0; margin: 0.5em 0; }
 img { max-width: 90%; display: block; margin: 1em auto; }
@@ -537,11 +539,12 @@ def contient_image(paragraph):
 
 
 def page_xhtml(titre, corps):
-    return ('<?xml version="1.0" encoding="utf-8"?>\n'
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n'
             '<!DOCTYPE html>\n'
             '<html xmlns="http://www.w3.org/1999/xhtml" '
-            'xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="fr">\n'
-            '<head><title>' + html_escape(titre) + '</title>\n'
+            'xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="fr" lang="fr">\n'
+            '<head>\n<meta charset="utf-8" />\n'
+            '<title>' + html_escape(titre) + '</title>\n'
             '<link rel="stylesheet" type="text/css" href="style/default.css"/>\n'
             '</head>\n<body>\n' + corps + '\n</body>\n</html>').encode('utf-8')
 
@@ -565,16 +568,16 @@ def construire_ebook(docx_path, infos, images, sortie):
     sous_titre = normaliser_texte_editorial(infos[SOUS_TITRE] or '')
     auteur = infos[AUTEUR] or 'Auteur'
     annee = infos[ANNEE] or str(datetime.now().year)
-    ident = infos[ISBN] or f'urn:uuid:ebook-{int(time.time())}'
+    ident = infos[ISBN] or str(uuid.uuid4())
     titre_complet = f'{titre} – {sous_titre}' if sous_titre else titre
 
-    items = []    # {'id','href','media','data','props'}
+    items = []    # {'id','href','media','data','props','fallback'}
     spine = []    # idref dans l'ordre de lecture
     toc = []      # (idref, libellé) pour NCX + nav
 
-    def add(iid, href, media, data, props=None):
+    def add(iid, href, media, data, props=None, fallback=None):
         items.append({'id': iid, 'href': href, 'media': media,
-                      'data': data, 'props': props})
+                      'data': data, 'props': props, 'fallback': fallback})
 
     def add_page(iid, href, titre_page, corps, entree_toc=None):
         add(iid, href, 'application/xhtml+xml', page_xhtml(titre_page, corps))
@@ -586,12 +589,20 @@ def construire_ebook(docx_path, infos, images, sortie):
     add('css', 'style/default.css', 'text/css', CSS_EBOOK)
     cover_data, cover_orig = couverture_octets()
     if cover_data:
-        add('cover-image', 'cover.jpg', 'image/jpeg', cover_data, 'cover-image')
+        add('cover-image', 'cover.jpg', 'image/jpeg', cover_data)
     _ax0 = lire_annexes()
     plan = plan_livre(infos, _ax0) if plan_livre else []
     modules_actifs = {module['id'] for module in plan}
 
     # ── Pages liminaires (structure éditoriale française) ──
+
+    # 0. Page de couverture (image) — 1ère dans le flux Google Play Books
+    if cover_data:
+        corps_cover = ('<div style="text-align:center;margin:0;padding:0;">'
+                       '<img src="cover.jpg" alt="Couverture" '
+                       'style="width:100%;height:100vh;object-fit:contain;"/>'
+                       '</div>')
+        add_page('cover-page', 'cover.xhtml', 'Couverture', corps_cover)
 
     # 1. Faux-titre
     corps_faux_titre = f'<div class="faux-titre"><h1>{html_escape(titre)}</h1></div>'
@@ -631,7 +642,7 @@ def construire_ebook(docx_path, infos, images, sortie):
     if infos[EDITEUR]:
         corps_titre += f'<p class="publisher">{html_escape(infos[EDITEUR])}</p>'
     corps_titre += '</div>'
-    add_page('title', 'title.xhtml', titre, corps_titre, 'Page de titre')
+    add_page('title', 'title.xhtml', titre, corps_titre)
     
     # 4. Copyright
     copyright_txt = infos[COPYRIGHT] or f'© {annee} {auteur}. Tous droits réservés.'
@@ -651,13 +662,13 @@ def construire_ebook(docx_path, infos, images, sortie):
     if infos[DEDICACE]:
         corps = '<div class="dedication">' + ''.join(
             f'<p>{html_escape(l)}</p>' for l in infos[DEDICACE].splitlines() if l.strip()) + '</div>'
-        add_page('dedicace', 'dedicace.xhtml', 'Dédicace', corps, 'Dédicace')
+        add_page('dedicace', 'dedicace.xhtml', 'Dédicace', corps)
     
     # 6. Épigraphe optionnelle
     if infos[EPIGRAPHE]:
         corps = '<div class="epigraph">' + ''.join(
             f'<p>{html_escape(l)}</p>' for l in infos[EPIGRAPHE].splitlines() if l.strip()) + '</div>'
-        add_page('epigraphe', 'epigraphe.xhtml', 'Épigraphe', corps, 'Épigraphe')
+        add_page('epigraphe', 'epigraphe.xhtml', 'Épigraphe', corps)
     
     # 7. Sommaire visible unique, réservé avant de connaître les chapitres.
     if 'sommaire' in modules_actifs:
@@ -671,7 +682,7 @@ def construire_ebook(docx_path, infos, images, sortie):
         if os.path.exists(preface_path):
             contenu_preface = lire_fichier_markdown(preface_path)
             corps_preface = '<div class="preface"><h1>Préface</h1>' + convertir_markdown_html(contenu_preface) + '</div>'
-            add_page('preface', 'preface.xhtml', 'Préface', corps_preface, 'Préface')
+            add_page('preface', 'preface.xhtml', 'Préface', corps_preface)
     
     # ── Parcours du manuscrit ──
     print('   📖 Parcours du manuscrit…')
@@ -806,15 +817,16 @@ def construire_ebook(docx_path, infos, images, sortie):
         tdm['data'] = page_xhtml('Table des matières', corps)
     
     # ── nav.xhtml (EPUB 3) ──
-    nav = ('<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n'
+    nav = ('<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE html>\n'
            '<html xmlns="http://www.w3.org/1999/xhtml" '
-           'xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="fr">\n'
-           '<head><title>Table des matières</title></head>\n'
-           '<body><nav epub:type="toc" id="toc"><h1>Table des matières</h1><ol>')
+           'xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="fr" lang="fr">\n'
+           '<head>\n<meta charset="utf-8" />\n<title>Table des matières</title>\n</head>\n'
+           '<body>\n'
+           '<nav epub:type="toc" id="toc"><h1>Table des matières</h1><ol>')
     for iid, lib in toc:
         href = next(i['href'] for i in items if i['id'] == iid)
         nav += f'<li><a href="{href}">{html_escape(lib)}</a></li>'
-    nav += '</ol></nav></body></html>'
+    nav += '</ol></nav>\n</body></html>'
     add('nav', 'nav.xhtml', 'application/xhtml+xml', nav.encode('utf-8'), 'nav')
 
     # ── toc.ncx (navigation logique) ──
@@ -838,6 +850,8 @@ def construire_ebook(docx_path, infos, images, sortie):
 
     # ── content.opf ──
     modifie = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    editeur_nom = infos[EDITEUR] or auteur
+    copyright_txt = infos[COPYRIGHT] or f'© {annee} {auteur}. Tous droits réservés.'
     opf = ('<?xml version="1.0" encoding="utf-8"?>\n'
            '<package xmlns="http://www.idpf.org/2007/opf" version="3.0" '
            'unique-identifier="book-id" xml:lang="fr">\n<metadata '
@@ -846,6 +860,8 @@ def construire_ebook(docx_path, infos, images, sortie):
            f'<dc:title>{html_escape(titre_complet)}</dc:title>\n'
            '<dc:language>fr</dc:language>\n'
            f'<dc:creator>{html_escape(auteur)}</dc:creator>\n'
+           f'<dc:publisher>{html_escape(editeur_nom)}</dc:publisher>\n'
+           f'<dc:rights>{html_escape(copyright_txt)}</dc:rights>\n'
            f'<dc:date>{annee}</dc:date>\n'
            f'<dc:description>Ebook de {html_escape(auteur)}.</dc:description>\n'
            f'<meta property="dcterms:modified">{modifie}</meta>\n')
@@ -854,7 +870,8 @@ def construire_ebook(docx_path, infos, images, sortie):
     opf += '</metadata>\n<manifest>\n'
     for i in items:
         props = f' properties="{i["props"]}"' if i.get('props') else ''
-        opf += f'<item id="{i["id"]}" href="{i["href"]}" media-type="{i["media"]}"{props}/>\n'
+        fb = f' fallback="{i["fallback"]}"' if i.get('fallback') else ''
+        opf += f'<item id="{i["id"]}" href="{i["href"]}" media-type="{i["media"]}"{props}{fb}/>\n'
     opf += '</manifest>\n<spine toc="ncx">\n'
     for idref in spine:
         opf += f'<itemref idref="{idref}"/>\n'
@@ -913,6 +930,16 @@ def verifier_epub(chemin):
 
             if 'META-INF/container.xml' in noms and 'OEBPS/content.opf' in noms:
                 print('   ✅ container.xml et OPF présents')
+                # Valider XML du container.xml
+                cxml = z.read('META-INF/container.xml')
+                try:
+                    ET.fromstring(cxml)
+                    if not cxml.startswith(b'<?xml'):
+                        print('   ⚠️  container.xml ne commence pas par <?xml')
+                        ok = False
+                except Exception as e:
+                    print(f'   ⚠️  container.xml XML invalide : {e}')
+                    ok = False
             else:
                 print('   ⚠️  container.xml ou OPF absent')
                 ok = False

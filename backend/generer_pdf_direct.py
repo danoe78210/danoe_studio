@@ -554,8 +554,10 @@ def generer(safe=False):
         _cop.append(Paragraph(escape(_t), st_lim))
     if INFOS.get('site web'):
         _cop += [Spacer(1, 0.3 * cm), Paragraph(escape(INFOS['site web']), st_lim)]
-    _h_cop = sum(_f.wrap(_larg_utile, _haut_utile)[1] for _f in _cop)
-    lim.append(Spacer(1, max(0, _haut_utile - _h_cop)))
+    _larg_cop = W - MARGES[0] - MARGES[1]
+    _haut_cop = H - MARGES[2] - MARGES[3]
+    _h_cop = sum(_f.wrap(_larg_cop, _haut_cop)[1] for _f in _cop)
+    lim.append(Spacer(1, max(0, _haut_cop - _h_cop - 2)))
     lim += _cop
     lim.append(PageBreak())
     # 6. Avertissement

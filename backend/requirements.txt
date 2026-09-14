@@ -4,6 +4,12 @@
 # Génération documentaire (Word / DOCX)
 python-docx==1.2.0
 
+# Conversion DOCX → HTML sémantique (pipeline KPF)
+mammoth==1.12.2
+
+# Moteur de templating HTML (pipeline KPF)
+Jinja2==3.1.6
+
 # Génération PDF native (mise en page KDP)
 reportlab==5.0.1
 pypdf==6.17.0

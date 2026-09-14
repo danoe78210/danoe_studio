@@ -463,8 +463,12 @@ def reordonner_structure_word_file(chemin):
             if _os.path.isfile(pc):
                 els = []
                 h = doc.add_paragraph(titre)
-                try: h.style = doc.styles['Heading 1']
-                except Exception: pass
+                if cle == 'postface':
+                    try: h.style = doc.styles['Heading 1']
+                    except Exception: pass
+                else:
+                    h.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    run_style(h, titre, POLICE_TITRES, STYLE['taille_chap1'], True)
                 els.append(h._element)
                 for ln in open(pc, encoding='utf-8').read().split('\n'):
                     ln = ln.strip()
@@ -1324,8 +1328,9 @@ def ajouter_page_titre(infos):
 
 
 def ajouter_page_copyright(infos):
-    doc.add_page_break()
-    ligne_vide(10)
+    sec = nouvelle_section(WD_SECTION_START.NEW_PAGE, mode='bottom')
+    definir_entete(sec, '')
+    definir_pieds(sec, False)
     titre = infos[TITRE] or 'Titre du roman'
     auteur = infos[AUTEUR] or 'Auteur'
     annee = infos[ANNEE] or '2026'
@@ -1364,7 +1369,9 @@ def ajouter_page_copyright(infos):
 def ajouter_page_avertissement(infos):
     if not infos[AVERT]:
         return
-    doc.add_page_break()
+    sec = nouvelle_section(WD_SECTION_START.NEW_PAGE, mode='top')
+    definir_entete(sec, '')
+    definir_pieds(sec, False)
     ligne_vide(8)
     for t in lignes_texte(infos[AVERT]):
         p = doc.add_paragraph()
@@ -1376,7 +1383,9 @@ def ajouter_page_avertissement(infos):
 def ajouter_page_dedicace(infos):
     if not infos[DEDICACE]:
         return
-    doc.add_page_break()
+    sec = nouvelle_section(WD_SECTION_START.NEW_PAGE, mode='top')
+    definir_entete(sec, '')
+    definir_pieds(sec, False)
     ligne_vide(8)
     for t in lignes_texte(infos[DEDICACE]):
         p = doc.add_paragraph()
@@ -1390,7 +1399,9 @@ def ajouter_page_dedicace(infos):
 def ajouter_page_epigraphe(infos):
     if not infos[EPIGRAPHE]:
         return
-    doc.add_page_break()
+    sec = nouvelle_section(WD_SECTION_START.NEW_PAGE, mode='top')
+    definir_entete(sec, '')
+    definir_pieds(sec, False)
     ligne_vide(8)
     for t in lignes_texte(infos[EPIGRAPHE]):
         p = doc.add_paragraph()

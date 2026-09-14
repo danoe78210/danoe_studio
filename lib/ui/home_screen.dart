@@ -869,6 +869,11 @@ class _HomeScreenState extends State<HomeScreen>
       () => _runPythonScript('generer_ebook.py', onLine: _surLigne)
           .then((_) => _deplacerExports()));
 
+  Future<void> _exportKpf() => _run(
+      'Export KPF (Kindle)',
+      () => _runPythonScript('generer_kpf.py', onLine: _surLigne)
+          .then((_) => _deplacerExports()));
+
   Future<void> _resumesIA() => _run('Résumés IA',
       () => _runPythonScript('IA_Roman.py', onLine: (l) => _log(l)));
 
@@ -1292,6 +1297,12 @@ class _HomeScreenState extends State<HomeScreen>
                         .copyWith(fontSize: 16, fontWeight: FontWeight.w700))),
             const Spacer(flex: 3),
             Text('Ex libris', style: AntiqueTheme.caption),
+            const SizedBox(height: 4),
+            Text('v3.9.0 · Mis à jour le 14/09/2026',
+                style: GoogleFonts.cormorantGaramond(
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                    color: AntiqueTheme.inkSepia.withValues(alpha: 0.65))),
             const SizedBox(height: 6),
           ]);
         }),
@@ -2023,6 +2034,7 @@ class _HomeScreenState extends State<HomeScreen>
         _actionPage('▶', 'Générer le livre', _genererLivre, primary: true),
         _actionPage('🖨', 'PDF KDP noir & blanc', _exportPdf),
         _actionPage('📱', 'Ebook KDP (EPUB)', _genererEbook),
+        _actionPage('📦', 'Export KPF (Kindle)', _exportKpf),
         _actionPage('🤖', 'Résumés IA', _resumesIA),
       ]),
     );
@@ -2082,6 +2094,7 @@ class _HomeScreenState extends State<HomeScreen>
                 const SizedBox(height: 12),
                 _contactLine('📧', 'Email', 'contact@danoeecrivain.net'),
                 _contactLine('🌐', 'Site web', 'danoeecrivain.net'),
+                _contactLine('ℹ️', 'Version', 'v3.9.0 (14/09/2026)'),
               ],
             ),
           ),
