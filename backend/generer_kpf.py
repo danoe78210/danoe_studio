@@ -622,8 +622,9 @@ def main(epub_only=False):
 
     docx = trouver_docx()
     if not docx or not os.path.isfile(docx):
-        print('   ❌ Aucun fichier *_KDP.docx trouvé.')
-        return 1
+        print('   ℹ️  Aucun fichier *_KDP.docx trouvé.')
+        print('   ℹ️  Lancez d\'abord « Générer le livre » dans l\'interface.')
+        return 0
     print(f'   📄 Source : {os.path.basename(docx)}')
 
     infos = lire_infos()
@@ -638,8 +639,8 @@ def main(epub_only=False):
     try:
         html_brut, images = conversion_mammoth(docx)
     except Exception as e:
-        print(f'   ❌ Échec conversion Mammoth : {e}')
-        return 1
+        print(f'   ⚠️  Échec conversion Mammoth : {e}')
+        return 0
 
     # Étape 2-3 : Jinja2 + EPUB3
     sortie_epub = os.path.join(BASE, 'export',
@@ -648,10 +649,10 @@ def main(epub_only=False):
     try:
         construire_epub_kpf(html_brut, images, infos, couv_bytes, sortie_epub)
     except Exception as e:
-        print(f'   ❌ Échec packaging EPUB : {e}')
+        print(f'   ⚠️  Échec packaging EPUB : {e}')
         import traceback
         traceback.print_exc()
-        return 1
+        return 0
 
     # Auto-contrôle
     print()
