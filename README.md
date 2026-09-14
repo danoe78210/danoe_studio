@@ -10,22 +10,28 @@ Danoë Studio transforme vos chapitres Markdown en livres brochés professionnel
 
 ## 📥 Téléchargement
 
-👉 **[Télécharger la version Windows autonome v3.8.1](https://github.com/danoe78210/danoe_studio/releases/tag/v3.8.1)**
+👉 **[Télécharger la version Windows autonome v3.9.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.9.0)**
 
 La version autonome contient l’application Windows, le runtime Flutter, Python 3.12 et les dépendances du backend. **Aucun téléchargement de Flutter ou Python n’est nécessaire.**
 
-Téléchargez l’archive disponible dans la [Release v3.8.1](https://github.com/danoe78210/danoe_studio/releases/tag/v3.8.1), décompressez-la puis lancez `danoestudio.exe`.
-
-Une archive portable plus légère, sans Python embarqué, est également disponible dans cette release.
+Téléchargez l’archive disponible dans la [Release v3.9.0](https://github.com/danoe78210/danoe_studio/releases/tag/v3.9.0), décompressez-la puis lancez `danoestudio.exe`.
 
 ---
 
-## ✨ Nouveautés v3.8.1
+## ✨ Nouveautés v3.9.0
 
-### ⚡ Contexte IA optimisé
-- Routage des agents compact et chargement ponctuel des références détaillées.
-- Suppression du passage obligatoire par PAUL pour les tâches simples.
-- Handoff inter-agents limité à l’objectif, aux fichiers, aux contraintes, à la validation et à la sortie attendue.
+### 📦 Export KPF (Kindle Package Format)
+- Pipeline complet : Mammoth (DOCX) → Jinja2 → EPUB 3 → Kindle Previewer 4 (.kpf)
+- Bouton 📦 Export KPF (Kindle) dans l’interface Production
+- Détection automatique de Kindle Previewer 3 et 4
+
+### 📚 Corrections EPUB (Google Play Books)
+- container.xml sans espaces, page cover.xhtml avec image de couverture
+- UUID RFC 4122, métadonnées dc:rights et dc:publisher
+
+### 🖥️ Version autonome
+- Exécutable python.exe compilé PyInstaller (mammoth, jinja2, PIL…)
+- Dossier bin/kindle_tools/ pour Kindle Previewer portable
 
 ## ✨ Nouveautés v3.8.0
 
@@ -154,6 +160,7 @@ python generer_roman.py --rapide    # mode rapide
 python generer_pdf_direct.py        # PDF KDP direct
 python generer_pdf_direct.py --direct # PDF depuis Word si nécessaire
 python generer_ebook.py             # EPUB 3
+python generer_kpf.py              # KPF (Kindle Package Format)
 python appliquer_correctif.py       # correctifs idempotents
 ```
 
@@ -171,6 +178,7 @@ danoe_studio/
 │   ├── generer_roman.py          # Générateur Word
 │   ├── generer_pdf_direct.py     # Générateur PDF
 │   ├── generer_ebook.py          # Générateur EPUB 3
+│   ├── generer_kpf.py            # Générateur KPF (Kindle)
 │   ├── regles.py + regles_mise_en_page.json
 │   ├── appliquer_correctif.py    # Fichier unique de correctifs
 │   ├── Configuration_roman.json
@@ -201,7 +209,7 @@ Dans l’archive autonome distribuée, le runtime Python est placé dans `python
 
 | Version | Apports |
 |---|---|
-| **v3.8.1** | Optimisation des agents IA, réduction du contexte permanent et documentation de référence chargée ponctuellement |
+| **v3.9.0** | Optimisation des agents IA, réduction du contexte permanent et documentation de référence chargée ponctuellement |
 | **v3.8.0** | Mode glossaire pour Word, PDF et EPUB, guide utilisateur, références internes et robustesse du backend |
 | **v3.7.0** | Correction des champs Word à l’ouverture, renommage des chapitres, build Windows release stabilisé |
 | **v3.6.0** | Générateurs Word/PDF/EPUB consolidés, texte justifié, validations KDP et corrections éditoriales |
