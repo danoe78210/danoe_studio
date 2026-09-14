@@ -634,12 +634,50 @@ def main(epub_only=False):
 
     couv_bytes, couv_nom = couverture_octets()
 
-    # Étape 1 : Mammoth
+    # Étape 1 : Mammoth (ou fallback EPUB standard)
     print()
-    try:
-        html_brut, images = conversion_mammoth(docx)
-    except Exception as e:
-        print(f'   ⚠️  Échec conversion Mammoth : {e}')
+    mammoth_ok = mammoth is not None
+    if mammoth_ok:
+        try:
+            html_brut, images = conversion_mammoth(docx)
+        except Exception as e:
+            print(f'   ⚠️  Échec conversion Mammoth : {e}')
+            print('   ℹ️  Fallback : utilisation du pipeline EPUB standard.')
+            mammoth_ok = False
+    else:
+        print('   ℹ️  Mammoth non installé → pipeline EPUB standard.')
+
+    if not mammoth_ok:
+        # Fallback : utiliser generer_ebook pour produire l'EPUB
+        print('   🔄 Fallback : génération EPUB via generer_ebook…')
+        try:
+            from generer_ebook import main as ebook_main
+            ebook_main()
+        except Exception as e:
+            print(f'   ⚠️  Échec génération EPUB standard : {e}')
+            return 0
+        # Trouver l'EPUB généré
+        epub_files = glob.glob(os.path.join(BASE, 'export', '*_KDP.epub'))
+        if not epub_files:
+            print('   ⚠️  EPUB standard introuvable.')
+            return 0
+        sortie_epub = max(epub_files, key=os.path.getmtime)
+        print(f'   ✅ EPUB standard : {os.path.basename(sortie_epub)}')
+        # Skip directly to KPF conversion
+        if epub_only:
+            print(f'\\n✅ EPUB intermédiaire : {sortie_epub}')
+            return 0
+        print()
+        exe = trouver_kindle_previewer()
+        if exe:
+            ok, kpf, logs = convertir_kpf(sortie_epub, exe)
+            if ok:
+                print(f'\\n✅ KPF prêt pour KDP : {kpf}')
+            else:
+                print(f'\\n   ⚠️  Conversion KPF échouée.')
+        else:
+            print('   ℹ️  Kindle Previewer non détecté.')
+        print(f'   ⏱️  Durée : {time.time() - t0:.1f} s')
         return 0
 
     # Étape 2-3 : Jinja2 + EPUB3
