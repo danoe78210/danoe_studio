@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Structure des documents — Danoë Studio</title>
-<meta name="description" content="Structure des documents Word, PDF KDP et EPUB générés par Danoë Studio.">
+<title>Structure des documents — Danoë Studio v3.9.0</title>
+<meta name="description" content="Structure des documents Word, PDF KDP, EPUB et KPF (Kindle) générés par Danoë Studio.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
@@ -81,6 +81,19 @@
         <li>CSS avec texte courant justifié et exceptions éditoriales pour les titres et liminaires.</li>
         <li>Images, métadonnées, langue française et ressources référencées dans le package.</li>
         <li>Structure souple : la pagination varie selon la taille d'écran et la police du lecteur.</li>
+      </ul>
+    </article>
+
+    <h2>📦 Livre KPF (Kindle Package Format)</h2>
+    <p class="sub">Le format natif d'Amazon Kindle, prêt à être uploadé sur KDP sans conversion.</p>
+    <article class="card">
+      <h3>Ce que contient le KPF</h3>
+      <ul>
+        <li>Pipeline <strong>Mammoth</strong> (DOCX → HTML sémantique) puis <strong>Jinja2</strong> (template XHTML).</li>
+        <li>EPUB 3 intermédiaire validé, converti via Kindle Previewer 3/4.</li>
+        <li>Conserve la typographie, les styles et les images sans recompilation côté serveur.</li>
+        <li>Détection automatique de Kindle Previewer (Store, installé ou portable).</li>
+        <li>Fichier .kpf accepté tel quel par Amazon KDP pour une publication directe.</li>
       </ul>
     </article>
 
